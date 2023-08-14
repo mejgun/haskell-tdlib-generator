@@ -3,10 +3,12 @@ module Parser
     Arg (..),
     Class (..),
     classParser,
+    allParser,
   )
 where
 
 import Control.Monad (MonadPlus, void)
+import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Text.Megaparsec
@@ -33,11 +35,14 @@ data Class = Class
 
 type Parser = Parsec Void T.Text
 
+allParser :: Parser [Class]
+allParser = some classParser
+
 s :: Parser ()
 s = hspace
 
-s1 :: Parser ()
-s1 = hspace1
+sp1 :: Parser ()
+sp1 = hspace1
 
 cmt :: Parser ()
 cmt = void $ string "//"
@@ -52,16 +57,17 @@ classParser :: Parser Class
 classParser = do
   cmt
   void $ string "@class"
-  s1
+  sp1
   name <- sometext letterChar
-  s1
+  sp1
   descr
-  s1
+  sp1
   comment <- sometext printChar
-  list <- many m
+  list <- many m <|> pure []
+  void $ many newline
   pure $ Class name (T.intercalate " " (comment : list))
   where
-    m = do
+    m = try $ do
       void newline
       void $ string "//-"
       T.pack <$> some printChar
