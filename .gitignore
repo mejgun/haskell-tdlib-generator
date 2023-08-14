@@ -1,2 +1,4 @@
 .stack-work/
 *~
+haskell-tdlib-generator-exe
+td_api.tl

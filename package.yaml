@@ -34,7 +34,16 @@ ghc-options:
 - -Wredundant-constraints
 
 library:
+  language:    GHC2021
   source-dirs: src
+  dependencies:
+  - megaparsec
+  - text
+  default-extensions:
+  - OverloadedStrings
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - DuplicateRecordFields
 
 executables:
   haskell-tdlib-generator-exe:
@@ -49,6 +58,7 @@ executables:
 
 tests:
   haskell-tdlib-generator-test:
+    language:    GHC2021
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -57,3 +67,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - haskell-tdlib-generator
+    - megaparsec
+    - hspec
+    default-extensions:
+    - OverloadedStrings

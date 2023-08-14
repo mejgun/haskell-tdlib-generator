@@ -26,14 +26,22 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Parser
   other-modules:
       Paths_haskell_tdlib_generator
   hs-source-dirs:
       src
+  default-extensions:
+      OverloadedStrings
+      NoFieldSelectors
+      OverloadedRecordDot
+      DuplicateRecordFields
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
-  default-language: Haskell2010
+    , megaparsec
+    , text
+  default-language: GHC2021
 
 executable haskell-tdlib-generator-exe
   main-is: Main.hs
@@ -54,8 +62,12 @@ test-suite haskell-tdlib-generator-test
       Paths_haskell_tdlib_generator
   hs-source-dirs:
       test
+  default-extensions:
+      OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , haskell-tdlib-generator
-  default-language: Haskell2010
+    , hspec
+    , megaparsec
+  default-language: GHC2021
