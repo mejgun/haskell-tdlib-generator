@@ -8,7 +8,7 @@ import Data.Text.IO qualified as TI
 import Parser (allParser)
 import Pre qualified
 import System.Environment (getArgs)
-import Text.Megaparsec (parse, parseTest)
+import Text.Megaparsec (parse)
 
 someFunc :: IO ()
 someFunc = do
@@ -17,6 +17,9 @@ someFunc = do
   let (dat, fun) = Pre.prepare content
   TI.putStrLn dat
   TI.putStrLn fun
-  parseTest allParser $ T.unpack dat
+  let x = parse allParser fname (T.unpack dat)
+  case x of
+    Left e -> error $ show e
+    Right res -> mapM_ print res
 
-  parseTest allParser $ T.unpack fun
+-- parseTest allParser $ T.unpack fun

@@ -33,14 +33,14 @@ data Arg = Arg
   deriving (Show, Eq)
 
 data ArgVal
-  = Int32
-  | Int53
-  | Int64
-  | Bool
-  | String
-  | Bytes
-  | Module String
-  | Vector ArgVal
+  = TInt32
+  | TInt53
+  | TInt64
+  | TBool
+  | TString
+  | TBytes
+  | TModule String
+  | TVector ArgVal
   deriving (Show, Eq)
 
 type Parser = Parsec Void String
@@ -55,29 +55,17 @@ var = do
   pure (h : t)
 
 varVal :: Parser ArgVal
-varVal = do
-  h <-
-    string "int32"
-      <|> string "int53"
-      <|> string "int64"
-      <|> string "Bool"
-      <|> string "string"
-      <|> string "bytes"
-      <|> ( string "vector<"
-              *> some alphaNumChar
-              *> char '>'
-          )
-      <|> some letterChar
-  -- h <- letterChar
-  -- t <- some (alphaNumChar <|> char '<' <|> char '>')
-  pure $ case h of
-    "int32" -> Int32
-    "int53" -> Int53
-    "int64" -> Int64
-    "Bool" -> Bool
-    "String" -> String
-    "bytes" -> Bytes
-    x -> Module x
+varVal =
+  TInt32 <$ string "int32"
+    <|> TInt53 <$ string "int53"
+    <|> TInt64 <$ string "int64"
+    <|> TBool <$ string "Bool"
+    <|> TString <$ string "string"
+    <|> TBytes <$ string "bytes"
+    <|> string "vector<"
+      *> (TVector <$> varVal)
+      <* char '>'
+    <|> TModule <$> some letterChar
 
 classParser :: Parser Entry
 classParser = do
