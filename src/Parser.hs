@@ -1,13 +1,11 @@
 module Parser
   ( Entry (..),
     Arg (..),
-    classParser,
     allParser,
-    methodParser,
   )
 where
 
-import Control.Monad (guard, void)
+import Control.Monad (void)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Text.Megaparsec
@@ -28,17 +26,27 @@ data Entry
 
 data Arg = Arg
   { name :: String,
-    value :: String,
-    vector :: Bool,
+    value :: ArgVal,
     comment :: String,
     null :: Bool
   }
   deriving (Show, Eq)
 
+data ArgVal
+  = Int32
+  | Int53
+  | Int64
+  | Bool
+  | String
+  | Bytes
+  | Module String
+  | Vector ArgVal
+  deriving (Show, Eq)
+
 type Parser = Parsec Void String
 
 allParser :: Parser [Entry]
-allParser = some (classParser <|> methodParser)
+allParser = some (classParser <|> methodParser) <* eof
 
 var :: Parser String
 var = do
@@ -46,11 +54,30 @@ var = do
   t <- many (alphaNumChar <|> char '_')
   pure (h : t)
 
-varVal :: Parser String
+varVal :: Parser ArgVal
 varVal = do
-  h <- letterChar
-  t <- some (alphaNumChar <|> char '<' <|> char '>')
-  pure (h : t)
+  h <-
+    string "int32"
+      <|> string "int53"
+      <|> string "int64"
+      <|> string "Bool"
+      <|> string "string"
+      <|> string "bytes"
+      <|> ( string "vector<"
+              *> some alphaNumChar
+              *> char '>'
+          )
+      <|> some letterChar
+  -- h <- letterChar
+  -- t <- some (alphaNumChar <|> char '<' <|> char '>')
+  pure $ case h of
+    "int32" -> Int32
+    "int53" -> Int53
+    "int64" -> Int64
+    "Bool" -> Bool
+    "String" -> String
+    "bytes" -> Bytes
+    x -> Module x
 
 classParser :: Parser Entry
 classParser = do
@@ -92,7 +119,7 @@ methodParser = do
       name <- var
       void $ char ':'
       value <- varVal
-      pure $ Arg name value False "" False
+      pure $ Arg name value "" False
 
     attachcomment :: [(String, String)] -> Arg -> Arg
     attachcomment xs a = do

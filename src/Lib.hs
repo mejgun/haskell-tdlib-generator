@@ -14,6 +14,9 @@ someFunc :: IO ()
 someFunc = do
   [fname] <- getArgs
   content <- TI.readFile fname
-  let x = Pre.prepare content
-  TI.putStrLn x
-  parseTest allParser $ T.unpack x
+  let (dat, fun) = Pre.prepare content
+  TI.putStrLn dat
+  TI.putStrLn fun
+  parseTest allParser $ T.unpack dat
+
+  parseTest allParser $ T.unpack fun

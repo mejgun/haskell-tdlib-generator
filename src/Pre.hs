@@ -37,8 +37,14 @@ commentSplit = T.unlines . map go . T.lines
         then "\n//" <> x
         else x
 
-prepare :: T.Text -> T.Text
+splitFuncs :: T.Text -> (T.Text, T.Text)
+splitFuncs t = case T.splitOn "---functions---\n" t of
+  [dat, fun] -> (dat, fun)
+  _ -> error ""
+
+prepare :: T.Text -> (T.Text, T.Text)
 prepare =
-  commentSplit
+  splitFuncs
+    . commentSplit
     . removeMultiComment
     . removeJunk
