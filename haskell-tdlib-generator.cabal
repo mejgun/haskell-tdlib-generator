@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       Parser
+      Pre
   other-modules:
       Paths_haskell_tdlib_generator
   hs-source-dirs:

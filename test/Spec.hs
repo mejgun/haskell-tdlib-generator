@@ -41,3 +41,19 @@ main = hspec $ do
                          Parser.Class "InputBackground" "Contains information about background to set"
                        ]
                    )
+
+  describe "methodParser" $ do
+    it "" $ do
+      parse
+        Parser.methodParser
+        "test"
+        "//@description Describes an image in JPEG format @type Image type (see https://core.telegram.org/constructor/photoSize)\n\
+        \//@photo Information about the image file\n\
+        \//@width Image width\n\
+        \//@height Image\
+        \//-height\n\
+        \//@progressive_sizes Sizes of progressive JPEG file prefixes, which can be used to preliminarily show the image; in bytes\n\
+        \photoSize type:string photo:file width:int32 height:int32 progressive_sizes:vector<int32> = PhotoSize;\n"
+        `shouldBe` ( Right $
+                       Parser.Method "photoSize" "Describes an image in JPEG format" [] "PhotoSize"
+                   )

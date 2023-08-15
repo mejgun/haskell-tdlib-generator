@@ -4,36 +4,40 @@ module Parser
     Class (..),
     classParser,
     allParser,
+    methodParser,
   )
 where
 
-import Control.Monad (MonadPlus, void)
-import Data.Maybe (fromMaybe)
-import Data.Text qualified as T
+import Control.Monad (guard, void)
+import Data.Char (isPrint)
 import Data.Void (Void)
+import Debug.Trace qualified as Trace
 import Text.Megaparsec
 import Text.Megaparsec.Char
 
 data Method = Method
-  { name :: T.Text,
-    comment :: T.Text,
+  { name :: String,
+    comment :: String,
     args :: [Arg],
-    result :: T.Text
-  }
-
-data Arg = Arg
-  { name :: T.Text,
-    value :: T.Text,
-    comment :: T.Text
-  }
-
-data Class = Class
-  { name :: T.Text,
-    comment :: T.Text
+    result :: String
   }
   deriving (Show, Eq)
 
-type Parser = Parsec Void T.Text
+data Arg = Arg
+  { name :: String,
+    value :: String,
+    comment :: String,
+    null :: Bool
+  }
+  deriving (Show, Eq)
+
+data Class = Class
+  { name :: String,
+    comment :: String
+  }
+  deriving (Show, Eq)
+
+type Parser = Parsec Void String
 
 allParser :: Parser [Class]
 allParser = some classParser
@@ -44,30 +48,62 @@ s = hspace
 sp1 :: Parser ()
 sp1 = hspace1
 
-cmt :: Parser ()
-cmt = void $ string "//"
-
 descr :: Parser ()
 descr = void $ string "@description"
 
-sometext :: (MonadPlus m) => m Char -> m T.Text
-sometext x = T.pack <$> some x
+var :: Parser String
+var = do
+  h <- letterChar
+  t <- some alphaNumChar
+  pure (h : t)
+
+getComment :: Parser String
+getComment = do
+  comment <- takeWhile1P (Just "comment") (\x -> isPrint x && x /= '@')
+  list <- many rest <|> pure []
+  pure (unwords (comment : list))
+  where
+    rest :: Parser String
+    rest = try $ do
+      void newline
+      void $ string "//-"
+      some printChar
 
 classParser :: Parser Class
 classParser = do
-  cmt
-  void $ string "@class"
-  sp1
-  name <- sometext letterChar
+  void $ string "//@class "
+  name <- var
   sp1
   descr
   sp1
-  comment <- sometext printChar
-  list <- many m <|> pure []
+  comment <- getComment
   void $ many newline
-  pure $ Class name (T.intercalate " " (comment : list))
+  pure $ Class name comment
+
+methodParser :: Parser Method
+methodParser = do
+  void $ string "//@description "
+  comment <- getComment
+  Trace.traceM $ " >>> " <> comment <> " <<< "
+  list <- many argcomment
+  Trace.traceM $ " >>> " <> comment
+  void newline
+  name <- var
+  args <- many argParser
+  res <- var
+  pure $ Method name comment args res
   where
-    m = try $ do
-      void newline
-      void $ string "//-"
-      T.pack <$> some printChar
+    argcomment = try $ do
+      (newline >> void (string "//")) <|> void sp1
+      void $ char '@'
+      name <- var
+      sp1
+      comment <- getComment
+      pure (name, comment)
+
+argParser :: Parser Arg
+argParser = try $ do
+  name <- var
+  void $ char ':'
+  value <- var
+  pure $ Arg name value "" False
