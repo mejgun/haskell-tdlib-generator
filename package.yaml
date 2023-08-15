@@ -71,3 +71,6 @@ tests:
     - hspec
     default-extensions:
     - OverloadedStrings
+    - NoFieldSelectors
+    - OverloadedRecordDot
+    - DuplicateRecordFields

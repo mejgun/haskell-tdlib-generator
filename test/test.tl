@@ -5,6 +5,7 @@ authenticationCodeTypeTelegramMessage length:int32 = AuthenticationCodeType;
 //@description An authentication code is delivered via an SMS message to the specified phone number; applications may not receive this type of code
 //@length Length of the code
 authenticationCodeTypeSms length:int32 = AuthenticationCodeType;
+//@class EmailAddressAuthentication @description Contains authentication data for a email address
 //@description An authentication code is delivered via a phone call to the specified phone number
 //@length Length of the code
 authenticationCodeTypeCall length:int32 = AuthenticationCodeType;

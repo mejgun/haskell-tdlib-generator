@@ -1,6 +1,7 @@
 module Parser
   ( Entry (..),
     Arg (..),
+    ArgVal (..),
     allParser,
   )
 where
