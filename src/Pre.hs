@@ -23,10 +23,9 @@ removeJunk = T.unlines . map T.strip . filter (`notElem` junk) . T.lines
 removeMultiComment :: T.Text -> T.Text
 removeMultiComment = T.replace "\n//-" " "
 
-addNewlines :: T.Text -> T.Text
-addNewlines = T.unlines . f . T.lines
+commentSplit :: T.Text -> T.Text
+commentSplit = T.unlines . map go . T.lines
   where
-    f = map go
     go x =
       if T.isPrefixOf "//@class " x
         then x
@@ -39,4 +38,7 @@ addNewlines = T.unlines . f . T.lines
         else x
 
 prepare :: T.Text -> T.Text
-prepare = addNewlines . removeMultiComment . removeJunk
+prepare =
+  commentSplit
+    . removeMultiComment
+    . removeJunk
