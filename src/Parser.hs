@@ -28,7 +28,7 @@ data Entry
 data Arg = Arg
   { name :: String,
     value :: ArgVal,
-    comment :: String,
+    comment :: Maybe String,
     null :: Bool
   }
   deriving (Show, Eq)
@@ -108,14 +108,14 @@ methodParser = do
       name <- var
       void $ char ':'
       value <- varVal
-      pure $ Arg name value "" False
+      pure $ Arg name value Nothing False
 
     attachcomment :: [(String, String)] -> Arg -> Arg
     attachcomment xs a = do
       case filter ((== a.name) . fst) xs of
         [(_, x)] ->
           a
-            { comment = x,
+            { comment = Just x,
               null = length (T.splitOn "may be null" (T.pack x)) > 1
             }
         [] -> a

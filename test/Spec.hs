@@ -18,7 +18,7 @@ main = do
                     [ Arg
                         { name = "length",
                           value = TInt32,
-                          comment = "Length of the code",
+                          comment = Just "Left time before the email",
                           null = False
                         }
                     ],
@@ -29,9 +29,9 @@ main = do
                   comment = "An authentication code is delivered via an SMS message to the specified phone number; applications may not receive this type of code",
                   args =
                     [ Arg
-                        { name = "length",
+                        { name = "reset_in",
                           value = TInt32,
-                          comment = "Length of the code",
+                          comment = Nothing,
                           null = False
                         }
                     ],
@@ -48,10 +48,36 @@ main = do
                     [ Arg
                         { name = "length",
                           value = TInt32,
-                          comment = "Length of the code",
+                          comment = Just "Length of the code",
                           null = False
                         }
                     ],
                   result = "AuthenticationCodeType"
+                },
+              Method
+                { name = "stickerFullTypeRegular",
+                  comment = "The sticker is a regular sticker",
+                  args =
+                    [ Arg
+                        { name = "premium_animation",
+                          value = TModule "file",
+                          comment = Just "Premium animation of the sticker; may be null. If present, only Telegram Premium users can use the sticker",
+                          null = True
+                        }
+                    ],
+                  result = "StickerFullType"
+                },
+              Method
+                { name = "closedVectorPath",
+                  comment = "Represents a closed vector path.",
+                  args =
+                    [ Arg
+                        { name = "commands",
+                          value = TVector (TModule "VectorPathCommand"),
+                          comment = Nothing,
+                          null = False
+                        }
+                    ],
+                  result = "ClosedVectorPath"
                 }
             ]
