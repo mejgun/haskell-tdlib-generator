@@ -17,6 +17,7 @@ main = do
                   args =
                     [ Arg
                         { name = "length",
+                          realname = "length",
                           value = TInt32,
                           comment = Just "Left time before the email",
                           null = False
@@ -30,6 +31,7 @@ main = do
                   args =
                     [ Arg
                         { name = "reset_in",
+                          realname = "reset_in",
                           value = TInt32,
                           comment = Nothing,
                           null = False
@@ -47,6 +49,7 @@ main = do
                   args =
                     [ Arg
                         { name = "length",
+                          realname = "length",
                           value = TInt32,
                           comment = Just "Length of the code",
                           null = False
@@ -60,6 +63,7 @@ main = do
                   args =
                     [ Arg
                         { name = "premium_animation",
+                          realname = "premium_animation",
                           value = TModule "file",
                           comment = Just "Premium animation of the sticker; may be null. If present, only Telegram Premium users can use the sticker",
                           null = True
@@ -73,6 +77,7 @@ main = do
                   args =
                     [ Arg
                         { name = "commands",
+                          realname = "commands",
                           value = TVector (TModule "VectorPathCommand"),
                           comment = Nothing,
                           null = False

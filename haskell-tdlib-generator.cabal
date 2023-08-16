@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       Parser
+      Post
       Pre
   other-modules:
       Paths_haskell_tdlib_generator
@@ -42,6 +43,7 @@ library
       base >=4.7 && <5
     , megaparsec
     , text
+    , unordered-containers
   default-language: GHC2021
 
 executable haskell-tdlib-generator-exe

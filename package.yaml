@@ -39,6 +39,7 @@ library:
   dependencies:
   - megaparsec
   - text
+  - unordered-containers
   default-extensions:
   - OverloadedStrings
   - NoFieldSelectors

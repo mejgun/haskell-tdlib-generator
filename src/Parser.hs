@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-partial-fields #-}
+
 module Parser
   ( Entry (..),
     Arg (..),
@@ -10,7 +12,21 @@ import Control.Monad (void)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Text.Megaparsec
+  ( MonadParsec (eof, try),
+    Parsec,
+    many,
+    some,
+    (<|>),
+  )
 import Text.Megaparsec.Char
+  ( alphaNumChar,
+    char,
+    hspace1,
+    letterChar,
+    newline,
+    printChar,
+    string,
+  )
 
 data Entry
   = Method
@@ -26,7 +42,8 @@ data Entry
   deriving (Show, Eq)
 
 data Arg = Arg
-  { name :: String,
+  { realname :: String,
+    name :: String,
     value :: ArgVal,
     comment :: Maybe String,
     null :: Bool
@@ -72,9 +89,7 @@ classParser :: Parser Entry
 classParser = do
   void $ string "//@class "
   name <- var
-  hspace1
-  void $ string "@description"
-  hspace1
+  void $ string " @description "
   comment <- some printChar
   void newline
   pure $ Class name comment
@@ -94,8 +109,7 @@ methodParser = do
   pure $ Method name comment args res
   where
     argcomment = do
-      void (string "//")
-      void $ char '@'
+      void $ string "//@"
       name <- var
       hspace1
       comment <- some printChar
@@ -108,7 +122,7 @@ methodParser = do
       name <- var
       void $ char ':'
       value <- varVal
-      pure $ Arg name value Nothing False
+      pure $ Arg name name value Nothing False
 
     attachcomment :: [(String, String)] -> Arg -> Arg
     attachcomment xs a = do
