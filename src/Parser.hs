@@ -1,7 +1,7 @@
-{-# OPTIONS_GHC -Wno-partial-fields #-}
-
 module Parser
   ( Entry (..),
+    Method (..),
+    Class (..),
     Arg (..),
     ArgVal (..),
     allParser,
@@ -29,16 +29,22 @@ import Text.Megaparsec.Char
   )
 
 data Entry
-  = Method
-      { name :: String,
-        comment :: String,
-        args :: [Arg],
-        result :: String
-      }
-  | Class
-      { name :: String,
-        comment :: String
-      }
+  = M Method
+  | C Class
+  deriving (Show, Eq)
+
+data Method = Method
+  { name :: String,
+    comment :: String,
+    args :: [Arg],
+    result :: String
+  }
+  deriving (Show, Eq)
+
+data Class = Class
+  { name :: String,
+    comment :: String
+  }
   deriving (Show, Eq)
 
 data Arg = Arg
@@ -91,7 +97,7 @@ classParser = do
   void $ string " @description "
   comment <- some printChar
   void newline
-  pure $ Class name comment
+  pure $ C $ Class name comment
 
 methodParser :: Parser Entry
 methodParser = do
@@ -105,7 +111,7 @@ methodParser = do
   res <- var
   void $ string ";"
   void newline
-  pure $ Method name comment args res
+  pure $ M $ Method name comment args res
   where
     argcomment = do
       void $ string "//@"
