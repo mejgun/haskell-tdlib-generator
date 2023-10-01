@@ -25,10 +25,12 @@ source-repository head
 
 library
   exposed-modules:
+      Haskell.Internal
       Lib
       Parser
       Post
       Pre
+      Pre.Internal
   other-modules:
       Paths_haskell_tdlib_generator
   hs-source-dirs:

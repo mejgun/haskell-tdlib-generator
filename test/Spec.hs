@@ -1,4 +1,5 @@
 import Parser
+import Pre.Internal
 import Test.Hspec
 import Text.Megaparsec qualified as M
 
@@ -6,6 +7,11 @@ main :: IO ()
 main = do
   f <- readFile "test/test.tl"
   hspec $ do
+    describe "comment split" $ do
+      it "" $ do
+        commentSplit
+          "//@description Returns q @query Query w @message_thread_id If e\nsupergroupMembersFilterMention query:string message_thread_id:int53 = SupergroupMembersFilter;"
+          `shouldBe` "//@description Returns q \n//@query Query w \n//@message_thread_id If e\nsupergroupMembersFilterMention query:string message_thread_id:int53 = SupergroupMembersFilter;"
     describe "parser test" $ do
       it "from file" $ do
         M.parse allParser "test file" f
@@ -17,7 +23,6 @@ main = do
                   args =
                     [ Arg
                         { name = "length",
-                          realname = "length",
                           value = TInt32,
                           comment = Just "Left time before the email",
                           null = False
@@ -31,7 +36,6 @@ main = do
                   args =
                     [ Arg
                         { name = "reset_in",
-                          realname = "reset_in",
                           value = TInt32,
                           comment = Nothing,
                           null = False
@@ -49,7 +53,6 @@ main = do
                   args =
                     [ Arg
                         { name = "length",
-                          realname = "length",
                           value = TInt32,
                           comment = Just "Length of the code",
                           null = False
@@ -63,7 +66,6 @@ main = do
                   args =
                     [ Arg
                         { name = "premium_animation",
-                          realname = "premium_animation",
                           value = TModule "file",
                           comment = Just "Premium animation of the sticker; may be null. If present, only Telegram Premium users can use the sticker",
                           null = True
@@ -77,7 +79,6 @@ main = do
                   args =
                     [ Arg
                         { name = "commands",
-                          realname = "commands",
                           value = TVector (TModule "VectorPathCommand"),
                           comment = Nothing,
                           null = False

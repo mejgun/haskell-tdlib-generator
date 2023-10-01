@@ -42,8 +42,7 @@ data Entry
   deriving (Show, Eq)
 
 data Arg = Arg
-  { realname :: String,
-    name :: String,
+  { name :: String,
     value :: ArgVal,
     comment :: Maybe String,
     null :: Bool
@@ -122,7 +121,7 @@ methodParser = do
       name <- var
       void $ char ':'
       value <- varVal
-      pure $ Arg name name value Nothing False
+      pure $ Arg name value Nothing False
 
     attachcomment :: [(String, String)] -> Arg -> Arg
     attachcomment xs a = do
@@ -130,7 +129,10 @@ methodParser = do
         [(_, x)] ->
           a
             { comment = Just x,
-              null = length (T.splitOn "may be null" (T.pack x)) > 1
+              null = contains "may be null" (T.pack x)
             }
         [] -> a
         _ -> error "should not happen"
+
+    contains :: T.Text -> T.Text -> Bool
+    contains needle haystack = length (T.splitOn needle haystack) > 1

@@ -1,7 +1,7 @@
 module Pre (prepare) where
 
-import Data.Char (isAsciiLower)
 import Data.Text qualified as T
+import Pre.Internal
 
 junk :: [T.Text]
 junk =
@@ -23,28 +23,18 @@ removeJunk = T.unlines . map T.strip . filter (`notElem` junk) . T.lines
 removeMultiComment :: T.Text -> T.Text
 removeMultiComment = T.replace "\n//-" " "
 
-commentSplit :: T.Text -> T.Text
-commentSplit = T.unlines . map go . T.lines
-  where
-    go x =
-      if T.isPrefixOf "//@class " x
-        then x
-        else T.unwords . map func $ T.words x
-    func x =
-      if T.isPrefixOf "@" x
-        && T.length x > 2
-        && isAsciiLower (T.index x 1)
-        then "\n//" <> x
-        else x
-
 splitFuncs :: T.Text -> (T.Text, T.Text)
 splitFuncs t = case T.splitOn "---functions---\n" t of
   [dat, fun] -> (dat, fun)
   _ -> error ""
 
+trim :: T.Text -> T.Text
+trim = T.unlines . filter (not . T.null) . map T.strip . T.lines
+
 prepare :: T.Text -> (T.Text, T.Text)
 prepare =
   splitFuncs
+    . trim
     . commentSplit
     . removeMultiComment
     . removeJunk
