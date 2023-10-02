@@ -1,49 +1,29 @@
 module Parser
-  ( Entry (..),
-    Method (..),
+  ( Method (..),
     Class (..),
     Arg (..),
     ArgVal (..),
-    allParser,
+    Data,
+    parseArgVal,
+    parseClass,
   )
 where
 
-import Control.Monad (void)
 import Data.Text qualified as T
-import Data.Void (Void)
-import Text.Megaparsec
-  ( MonadParsec (eof, try),
-    Parsec,
-    many,
-    some,
-    (<|>),
-  )
-import Text.Megaparsec.Char
-  ( alphaNumChar,
-    char,
-    hspace1,
-    letterChar,
-    newline,
-    printChar,
-    string,
-  )
-
-data Entry
-  = M Method
-  | C Class
-  deriving (Show, Eq)
 
 data Method = Method
   { name :: String,
     comment :: String,
     args :: [Arg],
-    result :: String
+    result :: Class
   }
   deriving (Show, Eq)
 
+type Data = Method
+
 data Class = Class
-  { name :: String,
-    comment :: String
+  { name :: T.Text,
+    comment :: T.Text
   }
   deriving (Show, Eq)
 
@@ -62,34 +42,32 @@ data ArgVal
   | TBool
   | TString
   | TBytes
-  | TModule String
+  | TModule T.Text
   | TVector ArgVal
   deriving (Show, Eq)
 
-type Parser = Parsec Void String
+parseArgVal :: T.Text -> ArgVal
+parseArgVal "int32" = TInt32
+parseArgVal "int53" = TInt53
+parseArgVal "int64" = TInt64
+parseArgVal "Bool" = TBool
+parseArgVal "string" = TString
+parseArgVal "bytes" = TBytes
+parseArgVal x
+  | T.isPrefixOf "vector<" x && T.isSuffixOf ">" x =
+      TVector . parseArgVal . T.dropEnd 1 $ T.drop 7 x
+parseArgVal x = TModule x
 
-allParser :: Parser [Entry]
-allParser = some (classParser <|> methodParser) <* eof
+parseClass :: [T.Text] -> Either String Class
+parseClass [x] = case T.words x of
+  "//@class" : name : "@description" : descr -> Right $ Class name (T.unwords descr)
+  _ -> Left $ err x
+parseClass x = Left $ err x
 
-var :: Parser String
-var = do
-  h <- letterChar
-  t <- many (alphaNumChar <|> char '_')
-  pure (h : t)
+err :: (Show a) => a -> String
+err t = "not class description " <> show t
 
-varVal :: Parser ArgVal
-varVal =
-  TInt32 <$ string "int32"
-    <|> TInt53 <$ string "int53"
-    <|> TInt64 <$ string "int64"
-    <|> TBool <$ string "Bool"
-    <|> TString <$ string "string"
-    <|> TBytes <$ string "bytes"
-    <|> string "vector<"
-      *> (TVector <$> varVal)
-      <* char '>'
-    <|> TModule <$> some letterChar
-
+{-
 classParser :: Parser Entry
 classParser = do
   void $ string "//@class "
@@ -142,3 +120,4 @@ methodParser = do
 
     contains :: T.Text -> T.Text -> Bool
     contains needle haystack = length (T.splitOn needle haystack) > 1
+-}

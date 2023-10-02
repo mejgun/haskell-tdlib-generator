@@ -21,9 +21,9 @@ someFunc = do
       pars = parse allParser fname . T.unpack
       func = \case
         Left e -> error $ show e
-        Right res -> mapM_ print res >> check res
-  -- TI.putStrLn dat
-  -- TI.putStrLn fun
+        Right res -> mapM_ print res -- >> check res
+        -- TI.putStrLn dat
+        -- TI.putStrLn fun
   let (x, y) = (pars dat, pars fun)
   func x
   func y
