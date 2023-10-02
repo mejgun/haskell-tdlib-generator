@@ -87,7 +87,7 @@ parseArgComments = foldr go (Right [])
     go s (Right xs)
       | T.isPrefixOf "//@" s =
           let (name, descr) = T.breakOn " " (T.drop 3 s)
-           in Right $ (name, descr, T.isInfixOf "may be null" descr) : xs
+           in Right $ (name, T.strip descr, T.isInfixOf "may be null" descr) : xs
       | otherwise = Left $ "bad arg comment " <> show s
 
 parseArg :: T.Text -> Either String (T.Text, ArgVal)

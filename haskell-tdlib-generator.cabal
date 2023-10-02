@@ -28,7 +28,6 @@ library
       Haskell.Internal
       Lib
       Parser
-      Post
       Pre
       Pre.Internal
   other-modules:
