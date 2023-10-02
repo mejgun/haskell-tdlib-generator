@@ -67,7 +67,7 @@ parseMethod xs = do
 parseMethodLine :: T.Text -> Either String (T.Text, [(T.Text, ArgVal)], T.Text)
 parseMethodLine x
   | not $ T.isSuffixOf ";" x = Left $ "method line must end with ; " <> T.unpack x
-  | last (init (T.words x)) == "=" = Left $ "method line must contain =  " <> T.unpack x
+  | last (init (T.words x)) /= "=" = Left $ "method line must contain '=': " <> T.unpack x
   | otherwise =
       let xs = T.words $ T.dropEnd 1 x
           name = head xs
@@ -77,7 +77,7 @@ parseMethodLine x
 
 parseMethodComment :: T.Text -> Either String T.Text
 parseMethodComment x = case T.words x of
-  "//@description " : t -> Right $ T.unwords t
+  "//@description" : t -> Right $ T.unwords t
   _ -> Left $ "bad method description " <> T.unpack x
 
 parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text, Bool)]
