@@ -7,11 +7,9 @@ where
 
 import Data.Text qualified as T
 import Data.Text.IO qualified as TI
-import Parser (allParser)
 import Post ()
 import Pre qualified
 import System.Environment (getArgs)
-import Text.Megaparsec (parse)
 
 someFunc :: IO ()
 someFunc = do

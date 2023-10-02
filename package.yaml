@@ -37,7 +37,6 @@ library:
   language:    GHC2021
   source-dirs: src
   dependencies:
-  - megaparsec
   - text
   - unordered-containers
   default-extensions:

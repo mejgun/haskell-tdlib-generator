@@ -4,16 +4,16 @@ module Parser
     Arg (..),
     ArgVal (..),
     Data,
-    parseArgVal,
     parseClass,
+    parseMethod,
   )
 where
 
 import Data.Text qualified as T
 
 data Method = Method
-  { name :: String,
-    comment :: String,
+  { name :: T.Text,
+    comment :: T.Text,
     args :: [Arg],
     result :: Class
   }
@@ -28,9 +28,9 @@ data Class = Class
   deriving (Show, Eq)
 
 data Arg = Arg
-  { name :: String,
+  { name :: T.Text,
     value :: ArgVal,
-    comment :: Maybe String,
+    comment :: Maybe T.Text,
     null :: Bool
   }
   deriving (Show, Eq)
@@ -46,6 +46,33 @@ data ArgVal
   | TVector ArgVal
   deriving (Show, Eq)
 
+parseClass :: [T.Text] -> Either String Class
+parseClass xs = f1 >>= f2
+  where
+    f1 = case xs of
+      [x] -> Right x
+      _ -> Left $ "class description must be single line. " <> show xs
+    f2 x = case T.words x of
+      "//@class" : name : "@description" : descr -> Right $ Class name (T.unwords descr)
+      _ -> Left $ "not class description " <> show x
+
+parseMethod :: [T.Text] -> Either String Method
+parseMethod xs = do
+  (name, arglist, result) <- parseMethodLine $ last xs
+  comment <- parseMethodComment $ head xs
+  argcomments <- parseArgComments . init $ tail xs
+  args <- makeArgList arglist argcomments
+  Right $ Method name comment args (Class result "")
+
+parseMethodLine :: T.Text -> Either String (T.Text, [(T.Text, ArgVal)], T.Text)
+parseMethodLine = undefined
+
+parseMethodComment :: T.Text -> Either String T.Text
+parseMethodComment = undefined
+
+parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text, Bool)]
+parseArgComments = undefined
+
 parseArgVal :: T.Text -> ArgVal
 parseArgVal "int32" = TInt32
 parseArgVal "int53" = TInt53
@@ -58,24 +85,10 @@ parseArgVal x
       TVector . parseArgVal . T.dropEnd 1 $ T.drop 7 x
 parseArgVal x = TModule x
 
-parseClass :: [T.Text] -> Either String Class
-parseClass [x] = case T.words x of
-  "//@class" : name : "@description" : descr -> Right $ Class name (T.unwords descr)
-  _ -> Left $ err x
-parseClass x = Left $ err x
-
-err :: (Show a) => a -> String
-err t = "not class description " <> show t
+makeArgList :: [(T.Text, ArgVal)] -> [(T.Text, T.Text, Bool)] -> Either String [Arg]
+makeArgList = undefined
 
 {-
-classParser :: Parser Entry
-classParser = do
-  void $ string "//@class "
-  name <- var
-  void $ string " @description "
-  comment <- some printChar
-  void newline
-  pure $ C $ Class name comment
 
 methodParser :: Parser Entry
 methodParser = do
