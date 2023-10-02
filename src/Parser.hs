@@ -65,13 +65,35 @@ parseMethod xs = do
   Right $ Method name comment args (Class result "")
 
 parseMethodLine :: T.Text -> Either String (T.Text, [(T.Text, ArgVal)], T.Text)
-parseMethodLine = undefined
+parseMethodLine x
+  | not $ T.isSuffixOf ";" x = Left $ "method line must end with ; " <> T.unpack x
+  | last (init (T.words x)) == "=" = Left $ "method line must contain =  " <> T.unpack x
+  | otherwise =
+      let xs = T.words $ T.dropEnd 1 x
+          name = head xs
+          class_ = last xs
+          args = map parseArg . init . init $ tail xs
+       in sequence args >>= \a -> Right (name, a, class_)
 
 parseMethodComment :: T.Text -> Either String T.Text
-parseMethodComment = undefined
+parseMethodComment x = case T.words x of
+  "//@description " : t -> Right $ T.unwords t
+  _ -> Left $ "bad method description " <> T.unpack x
 
 parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text, Bool)]
-parseArgComments = undefined
+parseArgComments = foldr go (Right [])
+  where
+    go _ l@(Left _) = l
+    go s (Right xs)
+      | T.isPrefixOf "//@" s =
+          let (name, descr) = T.breakOn " " (T.drop 3 s)
+           in Right $ (name, descr, T.isInfixOf "may be null" descr) : xs
+      | otherwise = Left $ "bad arg comment " <> show s
+
+parseArg :: T.Text -> Either String (T.Text, ArgVal)
+parseArg x = case T.splitOn ":" x of
+  [name, val] -> Right (name, parseArgVal val)
+  _ -> Left $ "bad argument " <> T.unpack x
 
 parseArgVal :: T.Text -> ArgVal
 parseArgVal "int32" = TInt32
@@ -86,51 +108,9 @@ parseArgVal x
 parseArgVal x = TModule x
 
 makeArgList :: [(T.Text, ArgVal)] -> [(T.Text, T.Text, Bool)] -> Either String [Arg]
-makeArgList = undefined
-
-{-
-
-methodParser :: Parser Entry
-methodParser = do
-  void $ string "//@description "
-  comment <- some printChar
-  void newline
-  list <- many argcomment
-  name <- var
-  args <- map (attachcomment list) <$> many argParser
-  void $ string " = "
-  res <- var
-  void $ string ";"
-  void newline
-  pure $ M $ Method name comment args res
+makeArgList xs ys = mapM go xs
   where
-    argcomment = do
-      void $ string "//@"
-      name <- var
-      hspace1
-      comment <- some printChar
-      void newline
-      pure (name, comment)
-
-    argParser :: Parser Arg
-    argParser = try $ do
-      hspace1
-      name <- var
-      void $ char ':'
-      value <- varVal
-      pure $ Arg name value Nothing False
-
-    attachcomment :: [(String, String)] -> Arg -> Arg
-    attachcomment xs a = do
-      case filter ((== a.name) . fst) xs of
-        [(_, x)] ->
-          a
-            { comment = Just x,
-              null = contains "may be null" (T.pack x)
-            }
-        [] -> a
-        _ -> error "should not happen"
-
-    contains :: T.Text -> T.Text -> Bool
-    contains needle haystack = length (T.splitOn needle haystack) > 1
--}
+    go (name, val) = case filter (\(n, _, _) -> n == name) ys of
+      [] -> Right $ Arg name val Nothing False
+      [(_, descr, mbnull)] -> Right $ Arg name val (Just descr) mbnull
+      _ -> Left $ "multiple comment to " <> T.unpack name
