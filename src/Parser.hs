@@ -1,6 +1,7 @@
 module Parser
   ( Method (..),
     Class (..),
+    ClassName (..),
     Arg (..),
     ArgVal (..),
     Data,
@@ -15,16 +16,19 @@ data Method = Method
   { name :: T.Text,
     comment :: T.Text,
     args :: [Arg],
-    result :: Class
+    result :: ClassName
   }
   deriving (Show, Eq)
 
 type Data = Method
 
 data Class = Class
-  { name :: T.Text,
+  { name :: ClassName,
     comment :: T.Text
   }
+  deriving (Show, Eq)
+
+newtype ClassName = ClassName T.Text
   deriving (Show, Eq)
 
 data Arg = Arg
@@ -53,7 +57,7 @@ parseClass xs = f1 >>= f2
       [x] -> Right x
       _ -> Left $ "class description must be single line. " <> show xs
     f2 x = case T.words x of
-      "//@class" : name : "@description" : descr -> Right $ Class name (T.unwords descr)
+      "//@class" : name : "@description" : descr -> Right $ Class (ClassName name) (T.unwords descr)
       _ -> Left $ "not class description " <> show x
 
 parseMethod :: [T.Text] -> Either String Method
@@ -62,7 +66,7 @@ parseMethod xs = do
   comment <- parseMethodComment $ head xs
   argcomments <- parseArgComments . init $ tail xs
   args <- makeArgList arglist argcomments
-  Right $ Method name comment args (Class result "")
+  Right $ Method name comment args (ClassName result)
 
 parseMethodLine :: T.Text -> Either String (T.Text, [(T.Text, ArgVal)], T.Text)
 parseMethodLine x

@@ -67,7 +67,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - haskell-tdlib-generator
-    - megaparsec
+    - text
     - hspec
     default-extensions:
     - OverloadedStrings
