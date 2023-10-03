@@ -4,6 +4,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Haskell.Data (generateData)
 import Haskell.Func (generateFunc)
+import Haskell.Internal (upFst)
 import Parser (Class (Class), ClassName (ClassName), Method (Method, name, result))
 
 dataDir :: String
@@ -39,9 +40,3 @@ writeFuncs path = mapM_ (save . f)
 
     fileName :: T.Text -> FilePath
     fileName n = path <> funcDir <> T.unpack (upFst n) <> ".hs"
-
-upFst :: T.Text -> T.Text
-upFst text =
-  let h = T.toUpper $ T.take 1 text
-      t = T.tail text
-   in h <> t

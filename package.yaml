@@ -37,6 +37,7 @@ library:
   language:    GHC2021
   source-dirs: src
   dependencies:
+  - mtl
   - text
   - unordered-containers
   default-extensions:
