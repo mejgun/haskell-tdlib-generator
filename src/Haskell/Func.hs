@@ -2,7 +2,7 @@ module Haskell.Func (generateFunc) where
 
 import Control.Monad.Writer
 import Data.Text qualified as T
-import Haskell.Internal (upFst)
+import Haskell.Internal (argValToHaskellVal, upFst)
 import Parser (Arg (..), Method (..))
 
 moduleName :: T.Text -> Writer [T.Text] ()
@@ -17,20 +17,19 @@ dataSection m = do
   case m.args of
     [] -> pure ()
     (x : xs) -> do
-      addField "{ " x
+      addField "{" x
       mapM_ (addField ", ") xs
-  tell
-    [ "",
-      indent <> "} deriving (Eq)"
-    ]
+      tell [indent <> "}", indent <> "deriving (Eq)"]
   where
     indent = "  "
 
     addField pre a = do
+      -- tell [""]
+      tell [indent <> pre]
       case a.comment of
-        (Just c) -> tell ["", indent <> pre <> "-- | " <> c]
-        _ -> tell [pre]
-      tell [indent <> "  " <> a.name <> " = " <> a.name]
+        (Just c) -> tell [indent <> "  -- | " <> c]
+        _ -> pure ()
+      tell [indent <> "  " <> a.name <> " :: " <> argValToHaskellVal a]
 
 generateFunc :: Method -> T.Text
 generateFunc m = T.unlines . execWriter $ do
