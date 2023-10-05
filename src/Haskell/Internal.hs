@@ -1,7 +1,7 @@
 module Haskell.Internal (upFst, argValToHaskellVal) where
 
 import Data.Text qualified as T
-import Parser (Arg (..), ArgVal (..), ClassName (ClassName), Method (..))
+import Parser (Arg (..), ArgVal (..))
 
 upFst :: T.Text -> T.Text
 upFst text =
@@ -10,19 +10,20 @@ upFst text =
    in h <> t
 
 argValToHaskellVal :: Arg -> T.Text
-argValToHaskellVal Arg {null = n, value = v} =
+argValToHaskellVal Arg {value = v} =
   mb <> go v
   where
-    go y = case y of
-      TInt32 -> "Int"
-      TInt53 -> "Int"
-      TInt64 -> "Int"
-      TBool -> "Bool"
-      TString -> "Text"
-      TBytes -> "ByteString"
-      (TModule t) -> t
-      (TVector x) -> "[" <> go x <> "]"
-    mb = if n then "Maybe " else ""
+    mb = "Maybe "
+    go y =
+      case y of
+        TInt32 -> "Int"
+        TInt53 -> "Int"
+        TInt64 -> "Int"
+        TBool -> "Bool"
+        TString -> "Text"
+        TBytes -> "ByteString"
+        (TModule t) -> t
+        (TVector x) -> "[" <> go x <> "]"
 
 {-
 data Func = Func

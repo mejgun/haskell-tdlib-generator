@@ -33,8 +33,7 @@ newtype ClassName = ClassName T.Text deriving (Show, Eq)
 data Arg = Arg
   { name :: T.Text,
     value :: ArgVal,
-    comment :: Maybe T.Text,
-    null :: Bool
+    comment :: Maybe T.Text
   }
   deriving (Show, Eq)
 
@@ -83,17 +82,15 @@ parseMethodComment x = case T.words x of
   "//@description" : t -> Right $ T.unwords t
   _ -> Left $ "bad method description " <> T.unpack x
 
-parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text, Bool)]
+parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text)]
 parseArgComments = foldr go (Right [])
   where
     go _ l@(Left _) = l
     go s (Right xs)
       | T.isPrefixOf "//@" s =
           let (name, descr) = T.breakOn " " (T.drop 3 s)
-           in Right $ (name, T.strip descr, descr) : xs
+           in Right $ (name, T.strip descr) : xs
       | otherwise = Left $ "bad arg comment " <> show s
-
-    mbNull x = T.isInfixOf "may be null" x || T.isInfixOf "pass null" x
 
 parseArg :: T.Text -> Either String (T.Text, ArgVal)
 parseArg x = case T.splitOn ":" x of
@@ -112,10 +109,10 @@ parseArgVal x
       TVector . parseArgVal . T.dropEnd 1 $ T.drop 7 x
 parseArgVal x = TModule x
 
-makeArgList :: [(T.Text, ArgVal)] -> [(T.Text, T.Text, Bool)] -> Either String [Arg]
-makeArgList xs ys = mapM go xs
+makeArgList :: [(T.Text, ArgVal)] -> [(T.Text, T.Text)] -> Either String [Arg]
+makeArgList args comments = mapM go args
   where
-    go (name, val) = case filter (\(n, _, _) -> n == name) ys of
-      [] -> Right $ Arg name val Nothing False
-      [(_, descr, mbnull)] -> Right $ Arg name val (Just descr) mbnull
+    go (name, val) = case filter (\(n, _) -> n == name) comments of
+      [] -> Right $ Arg name val Nothing
+      [(_, descr)] -> Right $ Arg name val (Just descr)
       _ -> Left $ "multiple comment to " <> T.unpack name
