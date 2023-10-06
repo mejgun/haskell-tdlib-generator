@@ -1,7 +1,12 @@
 module Haskell.Internal (upFst, argValToHaskellVal, Func (..), Argument (..), methodToFunc, quoted, justify) where
 
 import Data.Text qualified as T
-import Parser (Arg (..), ArgVal (..), ClassName (ClassName), Method (..))
+import Parser
+  ( Arg (..),
+    ArgVal (..),
+    ClassName (ClassName),
+    Method (..),
+  )
 
 upFst :: T.Text -> T.Text
 upFst text =
@@ -14,7 +19,9 @@ data Func = Func
     nameReal :: T.Text,
     comment :: T.Text,
     args :: [Argument],
-    returns :: T.Text
+    returns :: T.Text,
+    importsQualified :: [(T.Text, T.Text)],
+    importsRaw :: [T.Text]
   }
 
 data Argument = Argument
@@ -33,7 +40,13 @@ methodToFunc m =
       nameReal = m.name,
       comment = m.comment,
       returns = cname m.result,
-      args = map convertArg m.args
+      args = map convertArg m.args,
+      importsQualified =
+        [ ("Data.Aeson", "A"),
+          ("Data.Aeson.Types", "T"),
+          ("Utils", "U")
+        ],
+      importsRaw = ["Data.Aeson ((.=))"]
     }
   where
     cname (ClassName n) = n

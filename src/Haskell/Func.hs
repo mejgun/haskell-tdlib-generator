@@ -58,7 +58,7 @@ toJsonSection x = do
     (addField ",")
     (tell [indent 3 <> "}"])
   tell [indent 4 <> "= A.object"]
-  tell [indent 5 <> "[ " <> justify (maxLen + 2) (quoted "@type") <> " A..= T.String " <> quoted x.nameReal]
+  tell [indent 5 <> "[ " <> justify (maxLen + 2) (quoted "@type") <> " .= T.String " <> quoted x.nameReal]
   doIfArgs
     x.args
     addJsonField
@@ -74,11 +74,18 @@ toJsonSection x = do
 
     addJsonField :: Argument -> Result
     addJsonField a =
-      tell [indent 5 <> ", " <> justify (maxLen + 2) (quoted a.nameReal) <> " A..= " <> a.toJsonFunc <> a.nameTemp]
+      tell [indent 5 <> ", " <> justify (maxLen + 2) (quoted a.nameReal) <> " .= " <> a.toJsonFunc <> a.nameTemp]
+
+importsSection :: Func -> Result
+importsSection x = do
+  mapM_ (\v -> tell ["import " <> v]) x.importsRaw
+  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.importsQualified
 
 generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do
   moduleName m
+  tell [""]
+  importsSection m
   tell [""]
   dataSection m
   tell [""]
