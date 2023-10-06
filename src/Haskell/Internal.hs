@@ -1,7 +1,7 @@
-module Haskell.Internal (upFst, argValToHaskellVal) where
+module Haskell.Internal (upFst, argValToHaskellVal, Func (..), Argument (..), methodToFunc) where
 
 import Data.Text qualified as T
-import Parser (Arg (..), ArgVal (..))
+import Parser (Arg (..), ArgVal (..), ClassName (ClassName), Method (..))
 
 upFst :: T.Text -> T.Text
 upFst text =
@@ -9,8 +9,8 @@ upFst text =
       t = T.tail text
    in h <> t
 
-argValToHaskellVal :: Arg -> T.Text
-argValToHaskellVal Arg {value = v} =
+argValToHaskellVal :: ArgVal -> T.Text
+argValToHaskellVal v =
   mb <> go v
   where
     mb = "Maybe "
@@ -25,31 +25,46 @@ argValToHaskellVal Arg {value = v} =
         (TModule t) -> t
         (TVector x) -> "[" <> go x <> "]"
 
-{-
 data Func = Func
-  { name :: T.Text,
+  { nameInCode :: T.Text,
+    nameReal :: T.Text,
     comment :: T.Text,
     args :: [Argument],
     returns :: T.Text
   }
 
 data Argument = Argument
-  { codeName :: T.Text,
-    realName :: T.Text,
-    type_ :: T.Text,
+  { nameInCode :: T.Text,
+    nameReal :: T.Text,
+    nameTemp :: T.Text,
+    typeInCode :: T.Text,
+    typeReal :: ArgVal,
     comment :: Maybe T.Text
   }
 
 methodToFunc :: Method -> Func
 methodToFunc m =
   Func
-    { name = m.name,
+    { nameInCode = upFst m.name,
+      nameReal = m.name,
       comment = m.comment,
       returns = cname m.result,
-      args = []
+      args = map convertArg m.args
     }
   where
     cname (ClassName n) = n
 
-    changeName n|n`elem` ["id","length"]
-    -}
+    convertArg :: Arg -> Argument
+    convertArg a =
+      Argument
+        { nameReal = a.name,
+          nameTemp = changeName a.name <> "_",
+          nameInCode = changeName a.name,
+          typeInCode = argValToHaskellVal a.value,
+          typeReal = a.value,
+          comment = a.comment
+        }
+
+    changeName n
+      | n `elem` ["id", "length"] = "_" <> n
+      | otherwise = n

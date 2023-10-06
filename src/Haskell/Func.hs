@@ -2,36 +2,82 @@ module Haskell.Func (generateFunc) where
 
 import Control.Monad.Writer
 import Data.Text qualified as T
-import Haskell.Internal (argValToHaskellVal, upFst)
-import Parser (Arg (..), Method (..))
+import Haskell.Internal (Argument (..), Func (..))
 
-moduleName :: T.Text -> Writer [T.Text] ()
-moduleName t = tell ["module TD.Query." <> upFst t <> " where", ""]
+type Result = Writer [T.Text] ()
 
-dataSection :: Method -> Writer [T.Text] ()
-dataSection m = do
+moduleName :: Func -> Result
+moduleName x = tell ["module TD.Query." <> x.nameInCode <> " where"]
+
+dataSection :: Func -> Result
+dataSection x = do
   tell
-    [ "-- | " <> m.comment,
-      "data " <> upFst m.name <> " = " <> upFst m.name
+    [ "-- | " <> x.comment,
+      "data " <> x.nameInCode <> " = " <> x.nameInCode
     ]
-  case m.args of
-    [] -> pure ()
-    (x : xs) -> do
-      addField "{" x
-      mapM_ (addField ", ") xs
-      tell [indent <> "}", indent <> "deriving (Eq)"]
+  doIfArgs
+    x.args
+    (addField "{")
+    (addField ",")
+    ( tell
+        [ indent 1 <> "}",
+          indent 1 <> "deriving (Eq)"
+        ]
+    )
   where
-    indent = "  "
-
+    addField :: T.Text -> Argument -> Result
     addField pre a = do
-      -- tell [""]
-      tell [indent <> pre]
+      tell [indent 1 <> pre]
       case a.comment of
-        (Just c) -> tell [indent <> "  -- | " <> c]
+        (Just c) -> tell [indent 2 <> "-- | " <> c]
         _ -> pure ()
-      tell [indent <> "  " <> a.name <> " :: " <> argValToHaskellVal a]
+      tell [indent 2 <> a.nameInCode <> " :: " <> a.typeInCode]
 
-generateFunc :: Method -> T.Text
+doIfArgs ::
+  [Argument] -> (Argument -> Result) -> (Argument -> Result) -> Result -> Result
+doIfArgs as ffirst fbody ffinal = case as of
+  [] -> pure ()
+  (x : xs) -> do
+    ffirst x
+    mapM_ fbody xs
+    ffinal
+
+indent :: Int -> T.Text
+indent i = T.replicate i "  "
+
+toJsonSection :: Func -> Result
+toJsonSection x = do
+  tell
+    [ "instance T.ToJSON " <> x.nameInCode <> " where",
+      indent 1 <> "toJSON",
+      indent 2 <> x.nameInCode
+    ]
+  doIfArgs
+    x.args
+    (addField "{")
+    (addField ",")
+    (tell [indent 3 <> "}"])
+  tell [indent 4 <> "= A.object"]
+  tell [indent 5 <> "[ \"@type\" A..= T.String \"" <> x.nameReal <> "\""]
+  doIfArgs
+    x.args
+    addJsonField
+    addJsonField
+    (pure ())
+  tell [indent 5 <> "]"]
+  where
+    addField :: T.Text -> Argument -> Result
+    addField pre a =
+      tell [indent 3 <> pre <> " " <> a.nameInCode <> " = " <> a.nameTemp]
+
+    addJsonField :: Argument -> Result
+    addJsonField a =
+      tell [indent 5 <> ", \"" <> a.nameReal <> "\" A..= " <> a.nameTemp]
+
+generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do
-  moduleName m.name
+  moduleName m
+  tell [""]
   dataSection m
+  tell [""]
+  toJsonSection m

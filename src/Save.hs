@@ -4,7 +4,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Haskell.Data (generateData)
 import Haskell.Func (generateFunc)
-import Haskell.Internal (upFst)
+import Haskell.Internal (methodToFunc, upFst)
 import Parser (Class (Class), ClassName (ClassName), Method (Method, name, result))
 
 dataDir :: String
@@ -33,7 +33,7 @@ writeFuncs :: FilePath -> [Method] -> IO ()
 writeFuncs path = mapM_ (save . f)
   where
     f :: Method -> (T.Text, T.Text)
-    f m@Method {name = name} = (name, generateFunc m)
+    f m@Method {name = name} = (name, generateFunc (methodToFunc m))
 
     save :: (T.Text, T.Text) -> IO ()
     save (name, text) = TIO.writeFile (fileName name) text

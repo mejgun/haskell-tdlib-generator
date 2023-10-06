@@ -12,7 +12,7 @@ commentSplit = T.strip . T.unlines . map go . T.lines
       | otherwise = x
     func x
       | T.isPrefixOf "@" x
-          && T.length x > 2
+          && T.length x > 1
           && isAsciiLower (T.index x 1) =
           "\n//" <> x
       | otherwise = x
