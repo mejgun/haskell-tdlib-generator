@@ -1,4 +1,4 @@
-module Haskell.Internal (upFst, argValToHaskellVal, Func (..), Argument (..), methodToFunc) where
+module Haskell.Internal (upFst, argValToHaskellVal, Func (..), Argument (..), methodToFunc, quoted, justify) where
 
 import Data.Text qualified as T
 import Parser (Arg (..), ArgVal (..), ClassName (ClassName), Method (..))
@@ -8,22 +8,6 @@ upFst text =
   let h = T.toUpper $ T.take 1 text
       t = T.tail text
    in h <> t
-
-argValToHaskellVal :: ArgVal -> T.Text
-argValToHaskellVal v =
-  mb <> go v
-  where
-    mb = "Maybe "
-    go y =
-      case y of
-        TInt32 -> "Int"
-        TInt53 -> "Int"
-        TInt64 -> "Int"
-        TBool -> "Bool"
-        TString -> "Text"
-        TBytes -> "ByteString"
-        (TModule t) -> t
-        (TVector x) -> "[" <> go x <> "]"
 
 data Func = Func
   { nameInCode :: T.Text,
@@ -38,7 +22,7 @@ data Argument = Argument
     nameReal :: T.Text,
     nameTemp :: T.Text,
     typeInCode :: T.Text,
-    typeReal :: ArgVal,
+    toJsonFunc :: T.Text,
     comment :: Maybe T.Text
   }
 
@@ -61,10 +45,36 @@ methodToFunc m =
           nameTemp = changeName a.name <> "_",
           nameInCode = changeName a.name,
           typeInCode = argValToHaskellVal a.value,
-          typeReal = a.value,
+          toJsonFunc = argValToToJsonFunc a.value,
           comment = a.comment
         }
 
     changeName n
       | n `elem` ["id", "length"] = "_" <> n
       | otherwise = n
+
+argValToToJsonFunc :: ArgVal -> T.Text
+argValToToJsonFunc TInt64 = "U.toS "
+argValToToJsonFunc _ = "x "
+
+argValToHaskellVal :: ArgVal -> T.Text
+argValToHaskellVal v =
+  mb <> go v
+  where
+    mb = "Maybe "
+    go y =
+      case y of
+        TInt32 -> "Int"
+        TInt53 -> "Int"
+        TInt64 -> "Int"
+        TBool -> "Bool"
+        TString -> "Text"
+        TBytes -> "ByteString"
+        (TModule t) -> t
+        (TVector x) -> "[" <> go x <> "]"
+
+quoted :: T.Text -> T.Text
+quoted x = "\"" <> x <> "\""
+
+justify :: Int -> T.Text -> T.Text
+justify i = T.justifyLeft i ' '

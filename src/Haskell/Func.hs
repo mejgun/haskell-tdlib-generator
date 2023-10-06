@@ -2,7 +2,7 @@ module Haskell.Func (generateFunc) where
 
 import Control.Monad.Writer
 import Data.Text qualified as T
-import Haskell.Internal (Argument (..), Func (..))
+import Haskell.Internal (Argument (..), Func (..), justify, quoted)
 
 type Result = Writer [T.Text] ()
 
@@ -58,7 +58,7 @@ toJsonSection x = do
     (addField ",")
     (tell [indent 3 <> "}"])
   tell [indent 4 <> "= A.object"]
-  tell [indent 5 <> "[ \"@type\" A..= T.String \"" <> x.nameReal <> "\""]
+  tell [indent 5 <> "[ " <> justify (maxLen + 2) (quoted "@type") <> " A..= T.String " <> quoted x.nameReal]
   doIfArgs
     x.args
     addJsonField
@@ -66,13 +66,15 @@ toJsonSection x = do
     (pure ())
   tell [indent 5 <> "]"]
   where
+    maxLen = maximum (1 : map (\a -> T.length a.nameInCode) x.args)
+
     addField :: T.Text -> Argument -> Result
     addField pre a =
-      tell [indent 3 <> pre <> " " <> a.nameInCode <> " = " <> a.nameTemp]
+      tell [indent 3 <> pre <> " " <> justify maxLen a.nameInCode <> " = " <> a.nameTemp]
 
     addJsonField :: Argument -> Result
     addJsonField a =
-      tell [indent 5 <> ", \"" <> a.nameReal <> "\" A..= " <> a.nameTemp]
+      tell [indent 5 <> ", " <> justify (maxLen + 2) (quoted a.nameReal) <> " A..= " <> a.toJsonFunc <> a.nameTemp]
 
 generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do
