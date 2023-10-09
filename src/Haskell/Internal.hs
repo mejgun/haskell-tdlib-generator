@@ -1,9 +1,28 @@
-module Haskell.Internal (upFst, argValToHaskellVal, Func (..), Argument (..), methodToFunc, quoted, justify) where
+module Haskell.Internal
+  ( upFst,
+    argValToHaskellVal,
+    Func
+      ( nameInCode,
+        importsQualified,
+        importsRaw,
+        args,
+        nameReal,
+        comment
+      ),
+    Argument (..),
+    methodToFunc,
+    quoted,
+    justify,
+    DataClass (..),
+    classToDataClass,
+  )
+where
 
 import Data.Text qualified as T
 import Parser
   ( Arg (..),
     ArgVal (..),
+    Class (..),
     ClassName (ClassName),
     Method (..),
   )
@@ -24,6 +43,21 @@ data Func = Func
     importsRaw :: [T.Text]
   }
 
+data DataClass = DataClass
+  { name :: T.Text,
+    comment :: T.Text,
+    methods :: [DataMethod],
+    importsQualified :: [(T.Text, T.Text)],
+    importsRaw :: [T.Text]
+  }
+
+data DataMethod = DataMethod
+  { nameInCode :: T.Text,
+    nameReal :: T.Text,
+    comment :: T.Text,
+    args :: [Argument]
+  }
+
 data Argument = Argument
   { nameInCode :: T.Text,
     nameReal :: T.Text,
@@ -32,6 +66,19 @@ data Argument = Argument
     toJsonFunc :: T.Text,
     comment :: Maybe T.Text
   }
+
+classToDataClass :: Class -> [Method] -> DataClass
+classToDataClass cl _ms =
+  DataClass
+    { name = cname cl.name,
+      comment = cl.comment,
+      methods = [],
+      importsQualified = [],
+      importsRaw = []
+    }
+
+cname :: ClassName -> T.Text
+cname (ClassName n) = n
 
 methodToFunc :: Method -> Func
 methodToFunc m =
@@ -49,8 +96,6 @@ methodToFunc m =
       importsRaw = ["Data.Aeson ((.=))"]
     }
   where
-    cname (ClassName n) = n
-
     convertArg :: Arg -> Argument
     convertArg a =
       Argument

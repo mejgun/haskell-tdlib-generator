@@ -4,7 +4,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Haskell.Data (generateData)
 import Haskell.Func (generateFunc)
-import Haskell.Internal (methodToFunc, upFst)
+import Haskell.Internal (classToDataClass, methodToFunc, upFst)
 import Parser (Class (Class), ClassName (ClassName), Method (Method, name, result))
 
 dataDir :: String
@@ -19,8 +19,9 @@ writeData path classes methods = mapM_ (save . f) classes
     f :: Class -> (ClassName, T.Text)
     f c@(Class name1 _) =
       ( name1,
-        generateData c $
-          filter (\(Method {result = name2}) -> name1 == name2) methods
+        generateData $
+          classToDataClass c $
+            filter (\(Method {result = name2}) -> name1 == name2) methods
       )
 
     save :: (ClassName, T.Text) -> IO ()
