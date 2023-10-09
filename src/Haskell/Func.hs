@@ -46,6 +46,22 @@ printNotEmpty (ind, begin, loop, end) list =
 indent :: Int -> T.Text
 indent i = T.replicate i "  "
 
+showSection :: Func -> Result
+showSection x = do
+  tell
+    [ "instance Show " <> x.nameInCode <> " where",
+      indent 1 <> "show",
+      indent 2 <> x.nameInCode
+    ]
+  printNotEmpty
+    (3, "{", ",", "}")
+    (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
+  tell [indent 4 <> quoted x.nameInCode]
+  unless (null x.args) $ tell [indent 5 <> "++ U.cc"]
+  printNotEmpty
+    (5, "[", ",", "]")
+    (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) x.args)
+
 toJsonSection :: Func -> Result
 toJsonSection x = do
   tell
@@ -75,5 +91,7 @@ generateFunc m = T.unlines . execWriter $ do
   importsSection m
   tell [""]
   dataSection m
+  tell [""]
+  showSection m
   tell [""]
   toJsonSection m
