@@ -18,6 +18,8 @@ module Haskell.Internal
   )
 where
 
+import Data.HashMap.Strict qualified as HM
+import Data.List qualified as L
 import Data.Text qualified as T
 import Parser
   ( Arg (..),
@@ -68,17 +70,58 @@ data Argument = Argument
   }
 
 classToDataClass :: Class -> [Method] -> DataClass
-classToDataClass cl _ms =
+classToDataClass cl ms = do
   DataClass
     { name = cname cl.name,
       comment = cl.comment,
-      methods = [],
+      methods = snd $ L.mapAccumL dataMethodToFunc initMap ms,
       importsQualified = [],
       importsRaw = []
     }
 
+dataMethodToFunc :: ArgsMap -> Method -> (ArgsMap, DataMethod)
+dataMethodToFunc acc m =
+  let as = L.mapAccumL argToArgument acc m.args
+   in ( fst as,
+        DataMethod
+          { nameInCode = upFst m.name,
+            nameReal = m.name,
+            comment = m.comment,
+            args = snd as
+          }
+      )
+
 cname :: ClassName -> T.Text
 cname (ClassName n) = n
+
+type ArgsMap = HM.HashMap T.Text ArgVal
+
+argToArgument :: ArgsMap -> Arg -> (ArgsMap, Argument)
+argToArgument acc a = do
+  let (mp, nm) = findName acc a.name
+   in ( mp,
+        Argument
+          { nameReal = a.name,
+            nameTemp = nm <> "_",
+            nameInCode = nm,
+            typeInCode = argValToHaskellVal a.value,
+            toJsonFunc = argValToToJsonFunc a.value,
+            comment = a.comment
+          }
+      )
+  where
+    findName mp nm = case HM.lookup nm mp of
+      (Just v)
+        | v == a.value -> (acc, nm)
+        | otherwise -> findName mp ("_" <> nm)
+      Nothing -> (HM.insert nm a.value mp, nm)
+
+initMap :: ArgsMap
+initMap =
+  HM.fromList
+    [ ("id", TModule "non-existent"),
+      ("length", TModule "non-existent")
+    ]
 
 methodToFunc :: Method -> Func
 methodToFunc m =
@@ -87,7 +130,7 @@ methodToFunc m =
       nameReal = m.name,
       comment = m.comment,
       returns = cname m.result,
-      args = map convertArg m.args,
+      args = snd $ L.mapAccumL argToArgument initMap m.args,
       importsQualified =
         [ ("Data.Aeson", "A"),
           ("Data.Aeson.Types", "T"),
@@ -95,21 +138,6 @@ methodToFunc m =
         ],
       importsRaw = ["Data.Aeson ((.=))"]
     }
-  where
-    convertArg :: Arg -> Argument
-    convertArg a =
-      Argument
-        { nameReal = a.name,
-          nameTemp = changeName a.name <> "_",
-          nameInCode = changeName a.name,
-          typeInCode = argValToHaskellVal a.value,
-          toJsonFunc = argValToToJsonFunc a.value,
-          comment = a.comment
-        }
-
-    changeName n
-      | n `elem` ["id", "length"] = "_" <> n
-      | otherwise = n
 
 argValToToJsonFunc :: ArgVal -> T.Text
 argValToToJsonFunc TInt64 = "U.toS "
