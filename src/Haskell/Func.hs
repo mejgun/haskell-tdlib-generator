@@ -13,10 +13,11 @@ dataSection :: Func -> Result
 dataSection x = do
   tell
     [ "-- | " <> x.comment,
-      "data " <> x.nameInCode <> " = " <> x.nameInCode
+      "data " <> x.nameInCode,
+      indent 1 <> "= " <> x.nameInCode
     ]
   printNotEmpty
-    (1, "{", ",", "}")
+    (2, "{", ",", "}")
     ( map
         (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("--| " <>) <$> a.comment))
         x.args
@@ -53,14 +54,18 @@ showSection x = do
       indent 1 <> "show",
       indent 2 <> x.nameInCode
     ]
-  printNotEmpty
-    (3, "{", ",", "}")
-    (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
-  tell [indent 4 <> quoted x.nameInCode]
+  printRecordInstance x
+  tell [indent 4 <> "= " <> quoted x.nameInCode]
   unless (null x.args) $ tell [indent 5 <> "++ U.cc"]
   printNotEmpty
     (5, "[", ",", "]")
     (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) x.args)
+
+printRecordInstance :: Func -> Result
+printRecordInstance x =
+  printNotEmpty
+    (3, "{", ",", "}")
+    (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
 toJsonSection :: Func -> Result
 toJsonSection x = do
@@ -69,9 +74,7 @@ toJsonSection x = do
       indent 1 <> "toJSON",
       indent 2 <> x.nameInCode
     ]
-  printNotEmpty
-    (3, "{", ",", "}")
-    (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
+  printRecordInstance x
   tell [indent 4 <> "= A.object"]
   printNotEmpty
     (5, "[", ",", "]")
@@ -87,11 +90,13 @@ importsSection x = do
 generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do
   moduleName m
-  tell [""]
+  space
   importsSection m
-  tell [""]
+  space
   dataSection m
-  tell [""]
+  space
   showSection m
-  tell [""]
+  space
   toJsonSection m
+  where
+    space = tell [""]
