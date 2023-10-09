@@ -16,21 +16,18 @@ dataSection x = do
       "data " <> x.nameInCode <> " = " <> x.nameInCode
     ]
   printNotEmpty
-    ( indent 1,
-      "{",
-      ",",
-      [ indent 1 <> "}",
-        indent 1 <> "deriving (Eq)"
-      ]
-    )
+    (1, "{", ",", "}")
     ( map
         (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("--| " <>) <$> a.comment))
         x.args
     )
+  tell [indent 1 <> "deriving (Eq)"]
 
-printNotEmpty :: (T.Text, T.Text, T.Text, [T.Text]) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
+-- (indentantion, openinig prefix, middle, closing)
+-- (fist val, second, comment)
+printNotEmpty :: (Int, T.Text, T.Text, T.Text) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
 printNotEmpty _ [] = pure ()
-printNotEmpty (ind, preBegin, preLoop, end) list =
+printNotEmpty (ind, begin, loop, end) list =
   let (len1, len2) = foldr (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2)) (1, 1) list
       h = head list
       t = tail list
@@ -40,11 +37,11 @@ printNotEmpty (ind, preBegin, preLoop, end) list =
               (Just text) -> T.justifyLeft len2 ' ' b <> " " <> text
               Nothing -> b
          in tell
-              [ind <> pre <> " " <> p1 <> " " <> p2]
+              [indent ind <> pre <> " " <> p1 <> " " <> p2]
    in do
-        save preBegin h
-        mapM_ (save preLoop) t
-        tell end
+        save begin h
+        mapM_ (save loop) t
+        tell [indent ind <> end]
 
 indent :: Int -> T.Text
 indent i = T.replicate i "  "
@@ -57,15 +54,14 @@ toJsonSection x = do
       indent 2 <> x.nameInCode
     ]
   printNotEmpty
-    (indent 3, "{", ",", [indent 5 <> "]"])
+    (3, "{", ",", "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
   tell [indent 4 <> "= A.object"]
   printNotEmpty
-    (indent 5, "[", ",", [])
+    (5, "[", ",", "]")
     ( (quoted "@type", ".= T.String " <> quoted x.nameReal, Nothing)
         : map (\a -> (quoted a.nameReal, ".= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
     )
-  tell [indent 5 <> "]"]
 
 importsSection :: Func -> Result
 importsSection x = do
