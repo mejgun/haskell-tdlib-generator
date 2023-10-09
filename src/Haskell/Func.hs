@@ -2,7 +2,7 @@ module Haskell.Func (generateFunc) where
 
 import Control.Monad.Writer
 import Data.Text qualified as T
-import Haskell.Internal (Argument (..), Func (..), justify, quoted)
+import Haskell.Internal (Argument (..), Func (..), quoted)
 
 type Result = Writer [T.Text] ()
 
@@ -15,32 +15,36 @@ dataSection x = do
     [ "-- | " <> x.comment,
       "data " <> x.nameInCode <> " = " <> x.nameInCode
     ]
-  doIfArgs
-    x.args
-    (addField "{")
-    (addField ",")
-    ( tell
-        [ indent 1 <> "}",
-          indent 1 <> "deriving (Eq)"
-        ]
+  printNotEmpty
+    ( indent 1,
+      "{",
+      ",",
+      [ indent 1 <> "}",
+        indent 1 <> "deriving (Eq)"
+      ]
     )
-  where
-    addField :: T.Text -> Argument -> Result
-    addField pre a = do
-      tell [indent 1 <> pre]
-      case a.comment of
-        (Just c) -> tell [indent 2 <> "-- | " <> c]
-        _ -> pure ()
-      tell [indent 2 <> a.nameInCode <> " :: " <> a.typeInCode]
+    ( map
+        (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("--| " <>) <$> a.comment))
+        x.args
+    )
 
-doIfArgs ::
-  [Argument] -> (Argument -> Result) -> (Argument -> Result) -> Result -> Result
-doIfArgs as ffirst fbody ffinal = case as of
-  [] -> pure ()
-  (x : xs) -> do
-    ffirst x
-    mapM_ fbody xs
-    ffinal
+printNotEmpty :: (T.Text, T.Text, T.Text, [T.Text]) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
+printNotEmpty _ [] = pure ()
+printNotEmpty (ind, preBegin, preLoop, end) list =
+  let (len1, len2) = foldr (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2)) (1, 1) list
+      h = head list
+      t = tail list
+      save pre (a, b, c) =
+        let p1 = T.justifyLeft len1 ' ' a
+            p2 = case c of
+              (Just text) -> T.justifyLeft len2 ' ' b <> " " <> text
+              Nothing -> b
+         in tell
+              [ind <> pre <> " " <> p1 <> " " <> p2]
+   in do
+        save preBegin h
+        mapM_ (save preLoop) t
+        tell end
 
 indent :: Int -> T.Text
 indent i = T.replicate i "  "
@@ -52,29 +56,16 @@ toJsonSection x = do
       indent 1 <> "toJSON",
       indent 2 <> x.nameInCode
     ]
-  doIfArgs
-    x.args
-    (addField "{")
-    (addField ",")
-    (tell [indent 3 <> "}"])
+  printNotEmpty
+    (indent 3, "{", ",", [indent 5 <> "]"])
+    (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
   tell [indent 4 <> "= A.object"]
-  tell [indent 5 <> "[ " <> justify (maxLen + 2) (quoted "@type") <> " .= T.String " <> quoted x.nameReal]
-  doIfArgs
-    x.args
-    addJsonField
-    addJsonField
-    (pure ())
+  printNotEmpty
+    (indent 5, "[", ",", [])
+    ( (quoted "@type", ".= T.String " <> quoted x.nameReal, Nothing)
+        : map (\a -> (quoted a.nameReal, ".= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
+    )
   tell [indent 5 <> "]"]
-  where
-    maxLen = maximum (1 : map (\a -> T.length a.nameInCode) x.args)
-
-    addField :: T.Text -> Argument -> Result
-    addField pre a =
-      tell [indent 3 <> pre <> " " <> justify maxLen a.nameInCode <> " = " <> a.nameTemp]
-
-    addJsonField :: Argument -> Result
-    addJsonField a =
-      tell [indent 5 <> ", " <> justify (maxLen + 2) (quoted a.nameReal) <> " .= " <> a.toJsonFunc <> a.nameTemp]
 
 importsSection :: Func -> Result
 importsSection x = do
