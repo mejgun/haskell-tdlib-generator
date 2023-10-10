@@ -24,6 +24,7 @@ where
 
 import Control.Monad.Writer (MonadWriter (tell), Writer)
 import Data.HashMap.Strict qualified as HM
+import Data.List (nub)
 import Data.List qualified as L
 import Data.Text qualified as T
 import Parser
@@ -54,7 +55,7 @@ data Func = Func
 
 data DataClass = DataClass
   { name :: T.Text,
-    comment :: T.Text,
+    comment :: Maybe T.Text,
     methods :: [DataMethod],
     importsQualified :: [(T.Text, T.Text)],
     importsRaw :: [T.Text]
@@ -77,25 +78,27 @@ data Argument = Argument
     comment :: Maybe T.Text
   }
 
-classToDataClass :: Class -> [Method] -> DataClass
-classToDataClass cl ms = do
+classToDataClass :: Maybe Class -> [Method] -> DataClass
+classToDataClass cl ms =
   DataClass
-    { name = cname cl.name,
-      comment = cl.comment,
+    { name = cname (head ms).result,
+      comment = (.comment) <$> cl,
       methods = snd $ L.mapAccumL dataMethodToFunc initMap ms,
       importsQualified =
         [ ("Data.Aeson", "A"),
-          ("Data.Aeson.Types", "T"),
+          ("Data.Aeson.Types", "AT"),
+          ("Data.Text", "T"),
+          ("Data.ByteString", "BS"),
           ("Utils", "U")
         ]
-          ++ foldr
-            (getImport . (.value))
-            []
-            (foldr (\m acc -> m.args ++ acc) [] ms),
+          ++ nub
+            ( foldr
+                (getImport . (.value))
+                []
+                (foldr (\m acc -> m.args ++ acc) [] ms)
+            ),
       importsRaw =
-        [ "Data.Aeson ((.=))",
-          "Data.Text (Text)",
-          "Data.ByteString (ByteString)"
+        [ "Data.Aeson ((.=))"
         ]
     }
 
@@ -139,10 +142,10 @@ argToArgument acc a = do
 
 initMap :: ArgsMap
 initMap =
-  HM.fromList
-    [ ("id", TModule "non-existent"),
-      ("length", TModule "non-existent")
-    ]
+  HM.fromList $
+    map
+      (,TModule "non-existent")
+      ["id", "length", "type", "data", "error"]
 
 methodToFunc :: Method -> Func
 methodToFunc m =
@@ -154,14 +157,14 @@ methodToFunc m =
       args = snd $ L.mapAccumL argToArgument initMap m.args,
       importsQualified =
         [ ("Data.Aeson", "A"),
-          ("Data.Aeson.Types", "T"),
+          ("Data.Aeson.Types", "AT"),
+          ("Data.Text", "T"),
+          ("Data.ByteString", "BS"),
           ("Utils", "U")
         ]
           ++ foldr (getImport . (.value)) [] m.args,
       importsRaw =
-        [ "Data.Aeson ((.=))",
-          "Data.Text (Text)",
-          "Data.ByteString (ByteString)"
+        [ "Data.Aeson ((.=))"
         ]
     }
 
@@ -174,7 +177,7 @@ getImport _ acc = acc
 
 argValToToJsonFunc :: ArgVal -> T.Text
 argValToToJsonFunc TInt64 = "U.toS "
-argValToToJsonFunc _ = "x "
+argValToToJsonFunc _ = ""
 
 argValToHaskellVal :: ArgVal -> T.Text
 argValToHaskellVal v =
@@ -187,8 +190,9 @@ argValToHaskellVal v =
         TInt53 -> "Int"
         TInt64 -> "Int"
         TBool -> "Bool"
-        TString -> "Text"
-        TBytes -> "ByteString"
+        TString -> "T.Text"
+        TBytes -> "BS.ByteString"
+        TDouble -> "Double"
         (TModule t) -> upFst t <> "." <> upFst t
         (TVector x) -> "[" <> go x <> "]"
 

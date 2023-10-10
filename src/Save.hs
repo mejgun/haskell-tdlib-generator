@@ -1,11 +1,12 @@
 module Save (writeData, writeFuncs) where
 
+import Data.List (find, groupBy)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Haskell.Data (generateData)
 import Haskell.Func (generateFunc)
 import Haskell.Internal (classToDataClass, methodToFunc, upFst)
-import Parser (Class (Class), ClassName (ClassName), Method (Method, name, result))
+import Parser (Class (..), ClassName (ClassName), Method (..), result)
 
 dataDir :: String
 dataDir = "/TD/Data/"
@@ -14,15 +15,26 @@ funcDir :: String
 funcDir = "/TD/Query/"
 
 writeData :: FilePath -> [Class] -> [Method] -> IO ()
-writeData path classes methods = mapM_ (save . f) classes
+writeData path classes methods = mapM_ (save . f) listwClass
   where
-    f :: Class -> (ClassName, T.Text)
-    f c@(Class name1 _) =
-      ( name1,
-        generateData $
-          classToDataClass c $
-            filter (\(Method {result = name2}) -> name1 == name2) methods
-      )
+    list :: [[Method]]
+    list = groupBy (\a b -> a.result == b.result) methods
+
+    listwClass :: [(ClassName, Maybe Class, [Method])]
+    listwClass =
+      map
+        ( \ms ->
+            let m = head ms
+             in ( m.result,
+                  find (\c -> c.name == m.result) classes,
+                  ms
+                )
+        )
+        list
+
+    f :: (ClassName, Maybe Class, [Method]) -> (ClassName, T.Text)
+    f (name, mbc, ms) =
+      (name, generateData (classToDataClass mbc ms))
 
     save :: (ClassName, T.Text) -> IO ()
     save (c, text) = TIO.writeFile (fileName c) text

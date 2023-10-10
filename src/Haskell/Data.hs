@@ -6,12 +6,10 @@ import Haskell.Internal
   ( Argument (..),
     DataClass (..),
     DataMethod (..),
-    Func (..),
     indent,
     printNotEmpty,
     quoted,
   )
-import Parser (Class, Method)
 
 type Result = Writer [T.Text] ()
 
@@ -25,7 +23,10 @@ importsSection x = do
 
 dataSection :: DataClass -> Result
 dataSection x = do
-  tell ["data " <> x.name <> " -- ^ " <> x.comment]
+  let cmt = case x.comment of
+        (Just t) -> " -- ^ " <> t
+        Nothing -> ""
+  tell ["data " <> x.name <> cmt]
   let h = head x.methods
       t = tail x.methods
   printMethod "=" h

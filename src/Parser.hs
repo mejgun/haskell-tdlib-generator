@@ -42,6 +42,7 @@ data ArgVal
   | TInt53
   | TInt64
   | TBool
+  | TDouble
   | TString
   | TBytes
   | TModule T.Text
@@ -101,6 +102,7 @@ parseArgVal :: T.Text -> ArgVal
 parseArgVal "int32" = TInt32
 parseArgVal "int53" = TInt53
 parseArgVal "int64" = TInt64
+parseArgVal "double" = TDouble
 parseArgVal "Bool" = TBool
 parseArgVal "string" = TString
 parseArgVal "bytes" = TBytes
