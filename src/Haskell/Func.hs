@@ -2,9 +2,7 @@ module Haskell.Func (generateFunc) where
 
 import Control.Monad.Writer
 import Data.Text qualified as T
-import Haskell.Internal (Argument (..), Func (..), quoted)
-
-type Result = Writer [T.Text] ()
+import Haskell.Internal (Argument (..), Func (..), Result, indent, printNotEmpty, quoted)
 
 moduleName :: Func -> Result
 moduleName x = tell ["module TD.Query." <> x.nameInCode <> " where"]
@@ -12,8 +10,7 @@ moduleName x = tell ["module TD.Query." <> x.nameInCode <> " where"]
 dataSection :: Func -> Result
 dataSection x = do
   tell
-    [ "-- | " <> x.comment,
-      "data " <> x.nameInCode,
+    [ "data " <> x.nameInCode <> " -- | " <> x.comment,
       indent 1 <> "= " <> x.nameInCode
     ]
   printNotEmpty
@@ -23,29 +20,6 @@ dataSection x = do
         x.args
     )
   tell [indent 1 <> "deriving (Eq)"]
-
--- (indentantion, openinig prefix, middle, closing)
--- (fist val, second, comment)
-printNotEmpty :: (Int, T.Text, T.Text, T.Text) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
-printNotEmpty _ [] = pure ()
-printNotEmpty (ind, begin, loop, end) list =
-  let (len1, len2) = foldr (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2)) (1, 1) list
-      h = head list
-      t = tail list
-      save pre (a, b, c) =
-        let p1 = T.justifyLeft len1 ' ' a
-            p2 = case c of
-              (Just text) -> T.justifyLeft len2 ' ' b <> " " <> text
-              Nothing -> b
-         in tell
-              [indent ind <> pre <> " " <> p1 <> " " <> p2]
-   in do
-        save begin h
-        mapM_ (save loop) t
-        tell [indent ind <> end]
-
-indent :: Int -> T.Text
-indent i = T.replicate i "  "
 
 showSection :: Func -> Result
 showSection x = do
