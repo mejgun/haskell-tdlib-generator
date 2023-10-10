@@ -83,8 +83,20 @@ classToDataClass cl ms = do
     { name = cname cl.name,
       comment = cl.comment,
       methods = snd $ L.mapAccumL dataMethodToFunc initMap ms,
-      importsQualified = [],
-      importsRaw = []
+      importsQualified =
+        [ ("Data.Aeson", "A"),
+          ("Data.Aeson.Types", "T"),
+          ("Utils", "U")
+        ]
+          ++ foldr
+            (getImport . (.value))
+            []
+            (foldr (\m acc -> m.args ++ acc) [] ms),
+      importsRaw =
+        [ "Data.Aeson ((.=))",
+          "Data.Text (Text)",
+          "Data.ByteString (ByteString)"
+        ]
     }
 
 dataMethodToFunc :: ArgsMap -> Method -> (ArgsMap, DataMethod)
@@ -144,9 +156,21 @@ methodToFunc m =
         [ ("Data.Aeson", "A"),
           ("Data.Aeson.Types", "T"),
           ("Utils", "U")
-        ],
-      importsRaw = ["Data.Aeson ((.=))"]
+        ]
+          ++ foldr (getImport . (.value)) [] m.args,
+      importsRaw =
+        [ "Data.Aeson ((.=))",
+          "Data.Text (Text)",
+          "Data.ByteString (ByteString)"
+        ]
     }
+
+getImport :: ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
+getImport (TModule modname) acc =
+  let md = upFst modname
+   in ("TD.Data." <> md, md) : acc
+getImport (TVector v) acc = getImport v acc
+getImport _ acc = acc
 
 argValToToJsonFunc :: ArgVal -> T.Text
 argValToToJsonFunc TInt64 = "U.toS "
@@ -165,7 +189,7 @@ argValToHaskellVal v =
         TBool -> "Bool"
         TString -> "Text"
         TBytes -> "ByteString"
-        (TModule t) -> t
+        (TModule t) -> upFst t <> "." <> upFst t
         (TVector x) -> "[" <> go x <> "]"
 
 quoted :: T.Text -> T.Text

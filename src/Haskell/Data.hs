@@ -16,11 +16,16 @@ import Parser (Class, Method)
 type Result = Writer [T.Text] ()
 
 moduleName :: DataClass -> Result
-moduleName x = tell ["module TD.Query." <> x.name <> " where"]
+moduleName x = tell ["module TD.Data." <> x.name <> " where"]
+
+importsSection :: DataClass -> Result
+importsSection x = do
+  mapM_ (\v -> tell ["import " <> v]) x.importsRaw
+  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.importsQualified
 
 dataSection :: DataClass -> Result
 dataSection x = do
-  tell ["data " <> x.name <> " -- | " <> x.comment]
+  tell ["data " <> x.name <> " -- ^ " <> x.comment]
   let h = head x.methods
       t = tail x.methods
   printMethod "=" h
@@ -28,11 +33,11 @@ dataSection x = do
   tell [indent 1 <> "deriving (Eq)"]
   where
     printMethod pre m = do
-      tell [indent 1 <> pre <> " " <> m.nameInCode <> " -- | " <> m.comment]
+      tell [indent 1 <> pre <> " " <> m.nameInCode <> " -- ^ " <> m.comment]
       printNotEmpty
         (2, "{", ",", "}")
         ( map
-            (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("--| " <>) <$> a.comment))
+            (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("-- ^ " <>) <$> a.comment))
             m.args
         )
 
@@ -63,6 +68,8 @@ printRecordInstance x =
 generateData :: DataClass -> T.Text
 generateData c = T.unlines . execWriter $ do
   moduleName c
+  space
+  importsSection c
   space
   dataSection c
   space

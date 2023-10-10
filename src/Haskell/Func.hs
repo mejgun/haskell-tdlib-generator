@@ -10,13 +10,13 @@ moduleName x = tell ["module TD.Query." <> x.nameInCode <> " where"]
 dataSection :: Func -> Result
 dataSection x = do
   tell
-    [ "data " <> x.nameInCode <> " -- | " <> x.comment,
+    [ "data " <> x.nameInCode <> " -- ^ " <> x.comment,
       indent 1 <> "= " <> x.nameInCode
     ]
   printNotEmpty
     (2, "{", ",", "}")
     ( map
-        (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("--| " <>) <$> a.comment))
+        (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("-- ^ " <>) <$> a.comment))
         x.args
     )
   tell [indent 1 <> "deriving (Eq)"]
