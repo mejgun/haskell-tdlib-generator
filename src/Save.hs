@@ -3,10 +3,10 @@ module Save (writeData, writeFuncs) where
 import Data.List (find, groupBy)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import Haskell.Data (generateData)
+import Haskell.Data (generateBoot, generateData)
 import Haskell.Func (generateFunc)
 import Haskell.Internal (classToDataClass, methodToFunc, upFst)
-import Parser (Class (..), ClassName (ClassName), Method (..), result)
+import Parser (Arg (..), ArgVal (..), Class (..), ClassName (ClassName), Method (..), result)
 
 dataDir :: String
 dataDir = "/TD/Data/"
@@ -15,7 +15,9 @@ funcDir :: String
 funcDir = "/TD/Query/"
 
 writeData :: FilePath -> [Class] -> [Method] -> IO ()
-writeData path classes methods = mapM_ (save . f) listwClass
+writeData path classes methods = do
+  mapM_ (save ".hs" . f) listwClass
+  mapM_ (save ".hs-boot") $ generateBoot importsList
   where
     list :: [[Method]]
     list = groupBy (\a b -> a.result == b.result) methods
@@ -32,15 +34,31 @@ writeData path classes methods = mapM_ (save . f) listwClass
         )
         list
 
+    importsList :: [(ClassName, [ClassName])]
+    importsList =
+      map
+        (\(n, _, ms) -> (n, concatMap getModules ms))
+        listwClass
+      where
+        getModules :: Method -> [ClassName]
+        getModules m =
+          concatMap
+            ( \a -> case a.value of
+                (TModule mn) -> [ClassName (upFst mn)]
+                _ -> []
+            )
+            m.args
+
     f :: (ClassName, Maybe Class, [Method]) -> (ClassName, T.Text)
     f (name, mbc, ms) =
       (name, generateData (classToDataClass mbc ms))
 
-    save :: (ClassName, T.Text) -> IO ()
-    save (c, text) = TIO.writeFile (fileName c) text
+    save :: String -> (ClassName, T.Text) -> IO ()
+    save suffix (c, text) = TIO.writeFile (fileName c suffix) text
 
-    fileName :: ClassName -> FilePath
-    fileName (ClassName name) = path <> dataDir <> T.unpack name <> ".hs"
+    fileName :: ClassName -> String -> FilePath
+    fileName (ClassName name) suffix =
+      path <> dataDir <> T.unpack name <> suffix
 
 writeFuncs :: FilePath -> [Method] -> IO ()
 writeFuncs path = mapM_ (save . f)

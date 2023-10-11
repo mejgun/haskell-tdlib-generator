@@ -1,7 +1,11 @@
-module Haskell.Data (generateData) where
+module Haskell.Data (generateData, generateBoot) where
 
 import Control.Monad.Writer
+import Data.Foldable (find)
+import Data.HashMap.Strict qualified as HM
+import Data.List (nub, (\\))
 import Data.Text qualified as T
+import Debug.Trace qualified
 import Haskell.Internal
   ( Argument (..),
     DataClass (..),
@@ -10,6 +14,7 @@ import Haskell.Internal
     printNotEmpty,
     quoted,
   )
+import Parser (ClassName (ClassName))
 
 type Result = Writer [T.Text] ()
 
@@ -77,3 +82,19 @@ generateData c = T.unlines . execWriter $ do
   showSection c
   where
     space = tell [""]
+
+generateBoot :: [(ClassName, [ClassName])] -> [(ClassName, T.Text)]
+generateBoot xs = do
+  map (\(x, _) -> (x, "undefined")) $
+    filter snd $
+      map (\(y, ys) -> (y, go y [] ys)) xs
+  where
+    get :: ClassName -> [ClassName]
+    get y = concatMap snd $ filter ((y ==) . fst) xs
+
+    go :: ClassName -> [ClassName] -> [ClassName] -> Bool
+    go _ _ [] = False
+    go x acc ys =
+      let newacc = acc ++ ys
+          newys = nub $ concatMap get ys \\ acc
+       in (x `elem` ys) || go x newacc newys
