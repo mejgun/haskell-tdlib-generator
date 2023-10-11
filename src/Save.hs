@@ -40,14 +40,13 @@ writeData path classes methods = do
         (\(n, _, ms) -> (n, concatMap getModules ms))
         listwClass
       where
+        go (TModule mn) = [ClassName (upFst mn)]
+        go (TVector v) = go v
+        go _ = []
+
         getModules :: Method -> [ClassName]
         getModules m =
-          concatMap
-            ( \a -> case a.value of
-                (TModule mn) -> [ClassName (upFst mn)]
-                _ -> []
-            )
-            m.args
+          concatMap (\a -> go a.value) m.args
 
     f :: (ClassName, Maybe Class, [Method]) -> (ClassName, T.Text)
     f (name, mbc, ms) =

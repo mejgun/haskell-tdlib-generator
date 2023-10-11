@@ -23,8 +23,7 @@ moduleName x = tell ["module TD.Data." <> x.name <> " where"]
 
 importsSection :: DataClass -> Result
 importsSection x = do
-  mapM_ (\v -> tell ["import " <> v]) x.importsRaw
-  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.importsQualified
+  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.imports
 
 dataSection :: DataClass -> Result
 dataSection x = do
@@ -41,7 +40,7 @@ dataSection x = do
     printMethod pre m = do
       tell [indent 1 <> pre <> " " <> m.nameInCode <> " -- ^ " <> m.comment]
       printNotEmpty
-        (2, "{", ",", "}")
+        (2, "{", ",", Just "}")
         ( map
             (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("-- ^ " <>) <$> a.comment))
             m.args
@@ -54,21 +53,45 @@ showSection x = do
   where
     printShow m = do
       tell
-        [ indent 1 <> "show",
-          indent 2 <> m.nameInCode
+        [ indent 1 <> "show " <> m.nameInCode
         ]
-      printRecordInstance m
-      tell [indent 4 <> "= " <> quoted m.nameInCode]
-      unless (null m.args) $ tell [indent 5 <> "++ U.cc"]
+      printRecordInstance 2 m
+      tell [indent 3 <> "= " <> quoted m.nameInCode]
+      unless (null m.args) $ tell [indent 4 <> "++ U.cc"]
       printNotEmpty
-        (5, "[", ",", "]")
+        (4, "[", ",", Just "]")
         (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) m.args)
-      tell [""]
 
-printRecordInstance :: DataMethod -> Result
-printRecordInstance x =
+toJsonSection :: DataClass -> Result
+toJsonSection x = do
+  tell
+    [ "instance AT.FromJSON " <> x.name <> " where",
+      indent 1 <> "parseJSON v@(AT.Object obj) = do",
+      indent 2 <> "t <- obj A..: \"@type\" :: AT.Parser String",
+      "",
+      indent 2 <> "case t of"
+    ]
   printNotEmpty
-    (3, "{", ",", "}")
+    (2, " ", " ", Just "")
+    (map (\m -> (quoted m.nameReal, " -> parse" <> m.nameInCode <> " v", Nothing)) x.methods)
+  tell [indent 2 <> "where"]
+  mapM_ printParseFuncs x.methods
+  where
+    printParseFuncs m = do
+      tell
+        [ indent 3 <> "parse" <> m.nameInCode <> " :: A.Value -> AT.Parser " <> x.name,
+          indent 3 <> "parse" <> m.nameInCode <> " = A.withObject " <> quoted m.nameInCode <> " $ \\o -> do"
+        ]
+      printNotEmpty
+        (3, " ", " ", Nothing)
+        (map (\a -> (a.nameTemp, "<- o A..:?", Just (quoted a.nameReal))) m.args)
+      tell [indent 4 <> "pure $ " <> m.nameInCode]
+      printRecordInstance 5 m
+
+printRecordInstance :: Int -> DataMethod -> Result
+printRecordInstance ind x =
+  printNotEmpty
+    (ind, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
 generateData :: DataClass -> T.Text
@@ -80,12 +103,14 @@ generateData c = T.unlines . execWriter $ do
   dataSection c
   space
   showSection c
+  space
+  toJsonSection c
   where
     space = tell [""]
 
 generateBoot :: [(ClassName, [ClassName])] -> [(ClassName, T.Text)]
 generateBoot xs = do
-  map (\(x, _) -> (x, "undefined")) $
+  map (\(x, _) -> (x, text x)) $
     filter snd $
       map (\(y, ys) -> (y, go y [] ys)) xs
   where
@@ -98,3 +123,15 @@ generateBoot xs = do
       let newacc = nub $ acc ++ ys
           newys = nub $ concatMap get $ ys \\ acc
        in (x `elem` newacc) || go x newacc newys
+    text (ClassName n) =
+      T.unlines
+        [ "module TD.Data." <> n <> " where",
+          "",
+          "import Data.Aeson.Types ( FromJSON, ToJSON )",
+          "",
+          "data " <> n,
+          "",
+          "instance Eq " <> n,
+          "",
+          "instance Show " <> n
+        ]

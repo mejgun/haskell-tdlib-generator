@@ -14,7 +14,7 @@ dataSection x = do
       indent 1 <> "= " <> x.nameInCode
     ]
   printNotEmpty
-    (2, "{", ",", "}")
+    (2, "{", ",", Just "}")
     ( map
         (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("-- ^ " <>) <$> a.comment))
         x.args
@@ -32,13 +32,13 @@ showSection x = do
   tell [indent 4 <> "= " <> quoted x.nameInCode]
   unless (null x.args) $ tell [indent 5 <> "++ U.cc"]
   printNotEmpty
-    (5, "[", ",", "]")
+    (5, "[", ",", Just "]")
     (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) x.args)
 
 printRecordInstance :: Func -> Result
 printRecordInstance x =
   printNotEmpty
-    (3, "{", ",", "}")
+    (3, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
 toJsonSection :: Func -> Result
@@ -51,15 +51,14 @@ toJsonSection x = do
   printRecordInstance x
   tell [indent 4 <> "= A.object"]
   printNotEmpty
-    (5, "[", ",", "]")
+    (5, "[", ",", Just "]")
     ( (quoted "@type", ".= T.String " <> quoted x.nameReal, Nothing)
         : map (\a -> (quoted a.nameReal, ".= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
     )
 
 importsSection :: Func -> Result
 importsSection x = do
-  mapM_ (\v -> tell ["import " <> v]) x.importsRaw
-  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.importsQualified
+  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.imports
 
 generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do

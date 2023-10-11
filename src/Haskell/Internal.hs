@@ -3,8 +3,7 @@ module Haskell.Internal
     argValToHaskellVal,
     Func
       ( nameInCode,
-        importsQualified,
-        importsRaw,
+        imports,
         args,
         nameReal,
         comment
@@ -22,7 +21,7 @@ module Haskell.Internal
   )
 where
 
-import Control.Monad.Writer (MonadWriter (tell), Writer)
+import Control.Monad.Writer (MonadWriter (tell), Writer, when)
 import Data.HashMap.Strict qualified as HM
 import Data.List (nub)
 import Data.List qualified as L
@@ -49,16 +48,14 @@ data Func = Func
     comment :: T.Text,
     args :: [Argument],
     returns :: T.Text,
-    importsQualified :: [(T.Text, T.Text)],
-    importsRaw :: [T.Text]
+    imports :: [(T.Text, T.Text)]
   }
 
 data DataClass = DataClass
   { name :: T.Text,
     comment :: Maybe T.Text,
     methods :: [DataMethod],
-    importsQualified :: [(T.Text, T.Text)],
-    importsRaw :: [T.Text]
+    imports :: [(T.Text, T.Text)]
   }
 
 data DataMethod = DataMethod
@@ -85,7 +82,7 @@ classToDataClass cl ms =
         { name = cname clname,
           comment = (.comment) <$> cl,
           methods = snd $ L.mapAccumL (dataMethodToFunc clname) initMap ms,
-          importsQualified =
+          imports =
             [ ("Data.Aeson", "A"),
               ("Data.Aeson.Types", "AT"),
               ("Data.Text", "T"),
@@ -97,10 +94,7 @@ classToDataClass cl ms =
                     (getImport clname . (.value))
                     []
                     (foldr (\m acc -> m.args ++ acc) [] ms)
-                ),
-          importsRaw =
-            [ "Data.Aeson ((.=))"
-            ]
+                )
         }
 
 dataMethodToFunc :: ClassName -> ArgsMap -> Method -> (ArgsMap, DataMethod)
@@ -156,17 +150,14 @@ methodToFunc m =
       comment = m.comment,
       returns = cname m.result,
       args = snd $ L.mapAccumL (argToArgument m.result) initMap m.args,
-      importsQualified =
+      imports =
         [ ("Data.Aeson", "A"),
           ("Data.Aeson.Types", "AT"),
           ("Data.Text", "T"),
           ("Data.ByteString", "BS"),
           ("Utils", "U")
         ]
-          ++ foldr (getImport m.result . (.value)) [] m.args,
-      importsRaw =
-        [ "Data.Aeson ((.=))"
-        ]
+          ++ foldr (getImport m.result . (.value)) [] m.args
     }
 
 getImport :: ClassName -> ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
@@ -209,7 +200,7 @@ justify i = T.justifyLeft i ' '
 
 -- (indentantion, openinig prefix, middle, closing)
 -- (fist val, second, comment)
-printNotEmpty :: (Int, T.Text, T.Text, T.Text) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
+printNotEmpty :: (Int, T.Text, T.Text, Maybe T.Text) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
 printNotEmpty _ [] = pure ()
 printNotEmpty (ind, begin, loop, end) list =
   let (len1, len2) = foldr (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2)) (1, 1) list
@@ -225,7 +216,9 @@ printNotEmpty (ind, begin, loop, end) list =
    in do
         save begin h
         mapM_ (save loop) t
-        tell [indent ind <> end]
+        case end of
+          (Just closing) -> tell [indent ind <> closing]
+          Nothing -> pure ()
 
 indent :: Int -> T.Text
 indent i = T.replicate i "  "
