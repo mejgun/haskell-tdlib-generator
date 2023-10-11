@@ -80,31 +80,32 @@ data Argument = Argument
 
 classToDataClass :: Maybe Class -> [Method] -> DataClass
 classToDataClass cl ms =
-  DataClass
-    { name = cname (head ms).result,
-      comment = (.comment) <$> cl,
-      methods = snd $ L.mapAccumL dataMethodToFunc initMap ms,
-      importsQualified =
-        [ ("Data.Aeson", "A"),
-          ("Data.Aeson.Types", "AT"),
-          ("Data.Text", "T"),
-          ("Data.ByteString", "BS"),
-          ("Utils", "U")
-        ]
-          ++ nub
-            ( foldr
-                (getImport . (.value))
-                []
-                (foldr (\m acc -> m.args ++ acc) [] ms)
-            ),
-      importsRaw =
-        [ "Data.Aeson ((.=))"
-        ]
-    }
+  let clname = (head ms).result
+   in DataClass
+        { name = cname clname,
+          comment = (.comment) <$> cl,
+          methods = snd $ L.mapAccumL (dataMethodToFunc clname) initMap ms,
+          importsQualified =
+            [ ("Data.Aeson", "A"),
+              ("Data.Aeson.Types", "AT"),
+              ("Data.Text", "T"),
+              ("Data.ByteString", "BS"),
+              ("Utils", "U")
+            ]
+              ++ nub
+                ( foldr
+                    (getImport clname . (.value))
+                    []
+                    (foldr (\m acc -> m.args ++ acc) [] ms)
+                ),
+          importsRaw =
+            [ "Data.Aeson ((.=))"
+            ]
+        }
 
-dataMethodToFunc :: ArgsMap -> Method -> (ArgsMap, DataMethod)
-dataMethodToFunc acc m =
-  let as = L.mapAccumL argToArgument acc m.args
+dataMethodToFunc :: ClassName -> ArgsMap -> Method -> (ArgsMap, DataMethod)
+dataMethodToFunc cln acc m =
+  let as = L.mapAccumL (argToArgument cln) acc m.args
    in ( fst as,
         DataMethod
           { nameInCode = upFst m.name,
@@ -120,15 +121,15 @@ cname (ClassName n) = n
 
 type ArgsMap = HM.HashMap T.Text ArgVal
 
-argToArgument :: ArgsMap -> Arg -> (ArgsMap, Argument)
-argToArgument acc a = do
+argToArgument :: ClassName -> ArgsMap -> Arg -> (ArgsMap, Argument)
+argToArgument cln acc a = do
   let (mp, nm) = findName acc a.name
    in ( mp,
         Argument
           { nameReal = a.name,
             nameTemp = nm <> "_",
             nameInCode = nm,
-            typeInCode = argValToHaskellVal a.value,
+            typeInCode = argValToHaskellVal cln a.value,
             toJsonFunc = argValToToJsonFunc a.value,
             comment = a.comment
           }
@@ -154,7 +155,7 @@ methodToFunc m =
       nameReal = m.name,
       comment = m.comment,
       returns = cname m.result,
-      args = snd $ L.mapAccumL argToArgument initMap m.args,
+      args = snd $ L.mapAccumL (argToArgument m.result) initMap m.args,
       importsQualified =
         [ ("Data.Aeson", "A"),
           ("Data.Aeson.Types", "AT"),
@@ -162,25 +163,27 @@ methodToFunc m =
           ("Data.ByteString", "BS"),
           ("Utils", "U")
         ]
-          ++ foldr (getImport . (.value)) [] m.args,
+          ++ foldr (getImport m.result . (.value)) [] m.args,
       importsRaw =
         [ "Data.Aeson ((.=))"
         ]
     }
 
-getImport :: ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
-getImport (TModule modname) acc =
+getImport :: ClassName -> ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
+getImport (ClassName nm) (TModule modname) acc =
   let md = upFst modname
-   in ("TD.Data." <> md, md) : acc
-getImport (TVector v) acc = getImport v acc
-getImport _ acc = acc
+   in if md == nm
+        then acc
+        else ("TD.Data." <> md, md) : acc
+getImport n (TVector v) acc = getImport n v acc
+getImport _ _ acc = acc
 
 argValToToJsonFunc :: ArgVal -> T.Text
 argValToToJsonFunc TInt64 = "U.toS "
 argValToToJsonFunc _ = ""
 
-argValToHaskellVal :: ArgVal -> T.Text
-argValToHaskellVal v =
+argValToHaskellVal :: ClassName -> ArgVal -> T.Text
+argValToHaskellVal (ClassName nm) v =
   mb <> go v
   where
     mb = "Maybe "
@@ -193,7 +196,9 @@ argValToHaskellVal v =
         TString -> "T.Text"
         TBytes -> "BS.ByteString"
         TDouble -> "Double"
-        (TModule t) -> upFst t <> "." <> upFst t
+        (TModule t) ->
+          let upt = upFst t
+           in if upt == nm then upt else upt <> "." <> upFst t
         (TVector x) -> "[" <> go x <> "]"
 
 quoted :: T.Text -> T.Text

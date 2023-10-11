@@ -95,6 +95,6 @@ generateBoot xs = do
     go :: ClassName -> [ClassName] -> [ClassName] -> Bool
     go _ _ [] = False
     go x acc ys =
-      let newacc = acc ++ ys
-          newys = nub $ concatMap get ys \\ acc
-       in (x `elem` ys) || go x newacc newys
+      let newacc = nub $ acc ++ ys
+          newys = nub $ concatMap get $ ys \\ acc
+       in (x `elem` newacc) || go x newacc newys
