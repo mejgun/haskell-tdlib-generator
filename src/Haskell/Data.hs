@@ -97,7 +97,14 @@ fromJsonSection x = do
             (3, " ", " ", Nothing)
             ( map
                 ( \a ->
-                    (a.nameTemp, "<- " <> a.fromsonFunc <> "o A..:? ", Just (quoted a.nameReal))
+                    ( a.nameTemp,
+                      "<- "
+                        <> case a.fromsonFunc of
+                          Nothing -> ""
+                          (Just func) -> func <> " <$> "
+                        <> "o A..:? ",
+                      Just (quoted a.nameReal)
+                    )
                 )
                 m.args
             )

@@ -72,7 +72,7 @@ data Argument = Argument
     nameTemp :: T.Text,
     typeInCode :: T.Text,
     toJsonFunc :: T.Text,
-    fromsonFunc :: T.Text,
+    fromsonFunc :: Maybe T.Text,
     comment :: Maybe T.Text
   }
 
@@ -178,11 +178,12 @@ argValToToJsonFunc TBytes = "I.toB "
 argValToToJsonFunc (TVector TBytes) = "I.toLB "
 argValToToJsonFunc _ = ""
 
-argValToFromJsonFunc :: ArgVal -> T.Text
-argValToFromJsonFunc TInt64 = "I.rm <$> "
-argValToFromJsonFunc TBytes = "I.rb <$> "
-argValToFromJsonFunc (TVector TBytes) = "I.rlb <$> "
-argValToFromJsonFunc _ = ""
+argValToFromJsonFunc :: ArgVal -> Maybe T.Text
+argValToFromJsonFunc TInt64 = Just "fmap I.readInt64"
+argValToFromJsonFunc TBytes = Just "fmap I.readBytes"
+argValToFromJsonFunc (TVector x) =
+  (\val -> "fmap (" <> val <> ")") <$> argValToFromJsonFunc x
+argValToFromJsonFunc _ = Nothing
 
 argValToHaskellVal :: ClassName -> ArgVal -> T.Text
 argValToHaskellVal (ClassName nm) v =
