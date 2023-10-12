@@ -1,11 +1,8 @@
 module Haskell.Data (generateData, generateBoot) where
 
 import Control.Monad.Writer
-import Data.Foldable (find)
-import Data.HashMap.Strict qualified as HM
 import Data.List (nub, (\\))
 import Data.Text qualified as T
-import Debug.Trace qualified
 import Haskell.Internal
   ( Argument (..),
     DataClass (..),
@@ -21,9 +18,17 @@ type Result = Writer [T.Text] ()
 moduleName :: DataClass -> Result
 moduleName x = tell ["module TD.Data." <> x.name <> " where"]
 
-importsSection :: DataClass -> Result
-importsSection x = do
-  mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.imports
+importsSection :: [T.Text] -> DataClass -> Result
+importsSection boots x = do
+  mapM_
+    ( \(k, v) ->
+        let b =
+              if v `elem` boots
+                then "{-# SOURCE #-} "
+                else ""
+         in tell ["import " <> b <> "qualified " <> k <> " as " <> v]
+    )
+    x.imports
 
 dataSection :: DataClass -> Result
 dataSection x = do
@@ -132,11 +137,11 @@ printRecordInstance ind x =
     (ind, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
-generateData :: DataClass -> T.Text
-generateData c = T.unlines . execWriter $ do
+generateData :: [ClassName] -> DataClass -> T.Text
+generateData boots c = T.unlines . execWriter $ do
   moduleName c
   space
-  importsSection c
+  importsSection (map (\(ClassName n) -> n) boots) c
   space
   dataSection c
   space

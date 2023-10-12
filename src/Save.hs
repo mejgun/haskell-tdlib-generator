@@ -16,9 +16,11 @@ funcDir = "/TD/Query/"
 
 writeData :: FilePath -> [Class] -> [Method] -> IO ()
 writeData path classes methods = do
-  mapM_ (save ".hs" . f) listwClass
-  mapM_ (save ".hs-boot") $ generateBoot importsList
+  mapM_ (save ".hs" . f (map fst boots)) listwClass
+  mapM_ (save ".hs-boot") boots
   where
+    boots = generateBoot importsList
+
     list :: [[Method]]
     list = groupBy (\a b -> a.result == b.result) methods
 
@@ -48,9 +50,9 @@ writeData path classes methods = do
         getModules m =
           concatMap (\a -> go a.value) m.args
 
-    f :: (ClassName, Maybe Class, [Method]) -> (ClassName, T.Text)
-    f (name, mbc, ms) =
-      (name, generateData (classToDataClass mbc ms))
+    f :: [ClassName] -> (ClassName, Maybe Class, [Method]) -> (ClassName, T.Text)
+    f bts (name, mbc, ms) =
+      (name, generateData bts (classToDataClass mbc ms))
 
     save :: String -> (ClassName, T.Text) -> IO ()
     save suffix (c, text) = TIO.writeFile (fileName c suffix) text
