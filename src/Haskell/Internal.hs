@@ -142,25 +142,26 @@ initMap =
   HM.fromList $
     map
       (,TModule "non-existent")
-      ["id", "length", "type", "data", "error"]
+      ["id", "length", "type", "data", "error", "filter"]
 
 methodToFunc :: Method -> Func
 methodToFunc m =
-  Func
-    { nameInCode = upFst m.name,
-      nameReal = m.name,
-      comment = m.comment,
-      returns = cname m.result,
-      args = snd $ L.mapAccumL (argToArgument m.result) initMap m.args,
-      imports =
-        [ ("Data.Aeson", "A"),
-          ("Data.Aeson.Types", "AT"),
-          ("Data.Text", "T"),
-          ("Data.ByteString", "BS"),
-          ("TD.Lib.Internal", "I")
-        ]
-          ++ foldr (getImport m.result . (.value)) [] m.args
-    }
+  let codeName = upFst m.name
+   in Func
+        { nameInCode = codeName,
+          nameReal = m.name,
+          comment = m.comment,
+          returns = cname m.result,
+          args = snd $ L.mapAccumL (argToArgument (ClassName codeName)) initMap m.args,
+          imports =
+            [ ("Data.Aeson", "A"),
+              ("Data.Aeson.Types", "AT"),
+              ("Data.Text", "T"),
+              ("Data.ByteString", "BS"),
+              ("TD.Lib.Internal", "I")
+            ]
+              ++ foldr (getImport (ClassName codeName) . (.value)) [] m.args
+        }
 
 getImport :: ClassName -> ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
 getImport (ClassName nm) (TModule modname) acc =
@@ -174,11 +175,13 @@ getImport _ _ acc = acc
 argValToToJsonFunc :: ArgVal -> T.Text
 argValToToJsonFunc TInt64 = "I.toS "
 argValToToJsonFunc TBytes = "I.toB "
+argValToToJsonFunc (TVector TBytes) = "I.toLB "
 argValToToJsonFunc _ = ""
 
 argValToFromJsonFunc :: ArgVal -> T.Text
 argValToFromJsonFunc TInt64 = "I.rm <$> "
 argValToFromJsonFunc TBytes = "I.rb <$> "
+argValToFromJsonFunc (TVector TBytes) = "I.rlb <$> "
 argValToFromJsonFunc _ = ""
 
 argValToHaskellVal :: ClassName -> ArgVal -> T.Text
@@ -197,7 +200,7 @@ argValToHaskellVal (ClassName nm) v =
         TDouble -> "Double"
         (TModule t) ->
           let upt = upFst t
-           in if upt == nm then upt else upt <> "." <> upFst t
+           in if upt == nm then upt else upt <> "." <> upt
         (TVector x) -> "[" <> go x <> "]"
 
 quoted :: T.Text -> T.Text
