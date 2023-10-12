@@ -28,7 +28,7 @@ data Class = Class
   }
   deriving (Show, Eq)
 
-newtype ClassName = ClassName T.Text deriving (Show, Eq)
+newtype ClassName = ClassName T.Text deriving (Show, Eq, Ord)
 
 data Arg = Arg
   { name :: T.Text,

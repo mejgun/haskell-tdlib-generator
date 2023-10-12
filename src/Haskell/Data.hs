@@ -1,4 +1,4 @@
-module Haskell.Data (generateData, generateBoot) where
+module Haskell.Data (generateData, generateBoot, generateGeneralResult) where
 
 import Control.Monad.Writer
 import Data.List (nub, (\\))
@@ -184,3 +184,32 @@ generateBoot xs = do
           "",
           "instance ToJSON " <> n
         ]
+
+generateGeneralResult :: [ClassName] -> T.Text
+generateGeneralResult xs = T.unlines . execWriter $ do
+  tell
+    [ "module TD.GeneralResult where",
+      "",
+      "import Control.Applicative (Alternative ((<|>)))",
+      "import Data.Aeson (FromJSON (parseJSON))",
+      "import qualified Data.Aeson as A",
+      "import qualified Data.Aeson.Types as T"
+    ]
+  mapM_
+    ( \(ClassName x) ->
+        tell ["import qualified TD.Data." <> x <> " as " <> x]
+    )
+    xs
+  tell ["", "data GeneralResult"]
+  printNotEmpty
+    (2, "=", "|", Nothing)
+    (map (\(ClassName x) -> (x, x <> "." <> x, Nothing)) xs)
+  tell
+    [ " deriving (Eq, Show)",
+      "",
+      "instance T.FromJSON GeneralResult where",
+      " parseJSON v@(T.Object obj) ="
+    ]
+  printNotEmpty
+    (2, "    (", "<|> (", Nothing)
+    (map (\(ClassName x) -> (x, " <$> parseJSON v", Just ")")) xs)

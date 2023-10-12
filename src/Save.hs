@@ -1,15 +1,18 @@
 module Save (writeData, writeFuncs) where
 
-import Data.List (find, groupBy)
+import Data.List (find, groupBy, nub, sort)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import Haskell.Data (generateBoot, generateData)
+import Haskell.Data (generateBoot, generateData, generateGeneralResult)
 import Haskell.Func (generateFunc)
 import Haskell.Internal (classToDataClass, methodToFunc, upFst)
 import Parser (Arg (..), ArgVal (..), Class (..), ClassName (ClassName), Method (..), result)
 
 dataDir :: String
 dataDir = "/TD/Data/"
+
+grDir :: String
+grDir = "/TD/"
 
 funcDir :: String
 funcDir = "/TD/Query/"
@@ -62,7 +65,13 @@ writeData path classes methods = do
       path <> dataDir <> T.unpack name <> suffix
 
 writeFuncs :: FilePath -> [Method] -> IO ()
-writeFuncs path = mapM_ (save . f)
+writeFuncs path xs = do
+  mapM_ (save . f) xs
+  TIO.writeFile (path <> grDir <> "GeneralResult.hs") $
+    generateGeneralResult $
+      sort $
+        nub $
+          map (\m -> m.result) xs
   where
     f :: Method -> (T.Text, T.Text)
     f m@Method {name = name} = (name, generateFunc (methodToFunc m))
