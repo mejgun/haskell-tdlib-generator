@@ -53,7 +53,19 @@ toJsonSection x = do
   printNotEmpty
     (5, "[", ",", Just "]")
     ( (quoted "@type", "A..= AT.String " <> quoted x.nameReal, Nothing)
-        : map (\a -> (quoted a.nameReal, "A..= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
+        : map
+          ( \a ->
+              ( quoted a.nameReal,
+                "A..= "
+                  <> ( case a.toJsonFunc of
+                         Nothing -> ""
+                         (Just func) -> func <> " "
+                     )
+                  <> a.nameTemp,
+                Nothing
+              )
+          )
+          x.args
     )
 
 importsSection :: Func -> Result

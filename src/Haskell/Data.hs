@@ -104,9 +104,10 @@ fromJsonSection x = do
                 ( \a ->
                     ( a.nameTemp,
                       "<- "
-                        <> case a.fromsonFunc of
-                          Nothing -> ""
-                          (Just func) -> func <> " <$> "
+                        <> ( case a.fromsonFunc of
+                               Nothing -> ""
+                               (Just func) -> func <> " <$> "
+                           )
                         <> "o A..:? ",
                       Just (quoted a.nameReal)
                     )
@@ -128,7 +129,19 @@ toJsonSection x = do
       printNotEmpty
         (4, "[", ",", Just "]")
         ( (quoted "@type", "A..= AT.String " <> quoted m.nameReal, Nothing)
-            : map (\a -> (quoted a.nameReal, "A..= " <> a.toJsonFunc <> a.nameTemp, Nothing)) m.args
+            : map
+              ( \a ->
+                  ( quoted a.nameReal,
+                    "A..= "
+                      <> ( case a.toJsonFunc of
+                             Nothing -> ""
+                             (Just func) -> func <> " "
+                         )
+                      <> a.nameTemp,
+                    Nothing
+                  )
+              )
+              m.args
         )
 
 printRecordInstance :: Int -> DataMethod -> Result

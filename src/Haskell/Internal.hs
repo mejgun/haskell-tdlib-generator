@@ -21,7 +21,7 @@ module Haskell.Internal
   )
 where
 
-import Control.Monad.Writer (MonadWriter (tell), Writer, when)
+import Control.Monad.Writer (MonadWriter (tell), Writer)
 import Data.HashMap.Strict qualified as HM
 import Data.List (nub)
 import Data.List qualified as L
@@ -71,7 +71,7 @@ data Argument = Argument
     nameReal :: T.Text,
     nameTemp :: T.Text,
     typeInCode :: T.Text,
-    toJsonFunc :: T.Text,
+    toJsonFunc :: Maybe T.Text,
     fromsonFunc :: Maybe T.Text,
     comment :: Maybe T.Text
   }
@@ -172,11 +172,12 @@ getImport (ClassName nm) (TModule modname) acc =
 getImport n (TVector v) acc = getImport n v acc
 getImport _ _ acc = acc
 
-argValToToJsonFunc :: ArgVal -> T.Text
-argValToToJsonFunc TInt64 = "I.toS "
-argValToToJsonFunc TBytes = "I.toB "
-argValToToJsonFunc (TVector TBytes) = "I.toLB "
-argValToToJsonFunc _ = ""
+argValToToJsonFunc :: ArgVal -> Maybe T.Text
+argValToToJsonFunc TInt64 = Just "fmap I.writeInt64 "
+argValToToJsonFunc TBytes = Just "fmap I.writeBytes "
+argValToToJsonFunc (TVector x) =
+  (\val -> "fmap (" <> val <> ")") <$> argValToToJsonFunc x
+argValToToJsonFunc _ = Nothing
 
 argValToFromJsonFunc :: ArgVal -> Maybe T.Text
 argValToFromJsonFunc TInt64 = Just "fmap I.readInt64"
