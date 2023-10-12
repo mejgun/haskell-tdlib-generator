@@ -30,10 +30,10 @@ showSection x = do
     ]
   printRecordInstance x
   tell [indent 4 <> "= " <> quoted x.nameInCode]
-  unless (null x.args) $ tell [indent 5 <> "++ U.cc"]
+  unless (null x.args) $ tell [indent 5 <> "++ I.cc"]
   printNotEmpty
     (5, "[", ",", Just "]")
-    (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) x.args)
+    (map (\a -> (quoted a.nameInCode, "`I.p` " <> a.nameTemp, Nothing)) x.args)
 
 printRecordInstance :: Func -> Result
 printRecordInstance x =

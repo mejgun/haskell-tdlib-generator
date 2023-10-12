@@ -72,6 +72,7 @@ data Argument = Argument
     nameTemp :: T.Text,
     typeInCode :: T.Text,
     toJsonFunc :: T.Text,
+    fromsonFunc :: T.Text,
     comment :: Maybe T.Text
   }
 
@@ -87,7 +88,7 @@ classToDataClass cl ms =
               ("Data.Aeson.Types", "AT"),
               ("Data.Text", "T"),
               ("Data.ByteString", "BS"),
-              ("Utils", "U")
+              ("TD.Lib.Internal", "I")
             ]
               ++ nub
                 ( foldr
@@ -125,6 +126,7 @@ argToArgument cln acc a = do
             nameInCode = nm,
             typeInCode = argValToHaskellVal cln a.value,
             toJsonFunc = argValToToJsonFunc a.value,
+            fromsonFunc = argValToFromJsonFunc a.value,
             comment = a.comment
           }
       )
@@ -155,7 +157,7 @@ methodToFunc m =
           ("Data.Aeson.Types", "AT"),
           ("Data.Text", "T"),
           ("Data.ByteString", "BS"),
-          ("Utils", "U")
+          ("TD.Lib.Internal", "I")
         ]
           ++ foldr (getImport m.result . (.value)) [] m.args
     }
@@ -170,8 +172,14 @@ getImport n (TVector v) acc = getImport n v acc
 getImport _ _ acc = acc
 
 argValToToJsonFunc :: ArgVal -> T.Text
-argValToToJsonFunc TInt64 = "U.toS "
+argValToToJsonFunc TInt64 = "I.toS "
+argValToToJsonFunc TBytes = "I.toB "
 argValToToJsonFunc _ = ""
+
+argValToFromJsonFunc :: ArgVal -> T.Text
+argValToFromJsonFunc TInt64 = "I.rm <$> "
+argValToFromJsonFunc TBytes = "I.rb <$> "
+argValToFromJsonFunc _ = ""
 
 argValToHaskellVal :: ClassName -> ArgVal -> T.Text
 argValToHaskellVal (ClassName nm) v =

@@ -57,13 +57,13 @@ showSection x = do
         ]
       printRecordInstance 2 m
       tell [indent 3 <> "= " <> quoted m.nameInCode]
-      unless (null m.args) $ tell [indent 4 <> "++ U.cc"]
+      unless (null m.args) $ tell [indent 4 <> "++ I.cc"]
       printNotEmpty
         (4, "[", ",", Just "]")
-        (map (\a -> (quoted a.nameInCode, "`U.p` " <> a.nameTemp, Nothing)) m.args)
+        (map (\a -> (quoted a.nameInCode, "`I.p` " <> a.nameTemp, Nothing)) m.args)
 
-toJsonSection :: DataClass -> Result
-toJsonSection x = do
+fromJsonSection :: DataClass -> Result
+fromJsonSection x = do
   tell
     [ "instance AT.FromJSON " <> x.name <> " where",
       indent 1 <> "parseJSON v@(AT.Object obj) = do",
@@ -84,7 +84,12 @@ toJsonSection x = do
         ]
       printNotEmpty
         (3, " ", " ", Nothing)
-        (map (\a -> (a.nameTemp, "<- o A..:?", Just (quoted a.nameReal))) m.args)
+        ( map
+            ( \a ->
+                (a.nameTemp, "<- " <> a.fromsonFunc <> "o A..:? ", Just (quoted a.nameReal))
+            )
+            m.args
+        )
       tell [indent 4 <> "pure $ " <> m.nameInCode]
       printRecordInstance 5 m
 
@@ -104,7 +109,7 @@ generateData c = T.unlines . execWriter $ do
   space
   showSection c
   space
-  toJsonSection c
+  fromJsonSection c
   where
     space = tell [""]
 
@@ -133,5 +138,7 @@ generateBoot xs = do
           "",
           "instance Eq " <> n,
           "",
-          "instance Show " <> n
+          "instance Show " <> n,
+          "",
+          "instance FromJSON " <> n
         ]
