@@ -77,12 +77,13 @@ fromJsonSection x = do
         ( \m ->
             ( quoted m.nameReal,
               if null m.args
-                then " -> pure " <> m.nameInCode
-                else " -> parse" <> m.nameInCode <> " v",
+                then "-> pure " <> m.nameInCode
+                else "-> parse" <> m.nameInCode <> " v",
               Nothing
             )
         )
         x.methods
+        ++ [("_", "-> mempty", Nothing)]
     )
   when (any (\m -> not (null m.args)) x.methods) $ tell [indent 2 <> "where"]
   mapM_ printParseFuncs x.methods
@@ -103,6 +104,21 @@ fromJsonSection x = do
           tell [indent 4 <> "pure $ " <> m.nameInCode]
           printRecordInstance 5 m
 
+toJsonSection :: DataClass -> Result
+toJsonSection x = do
+  tell ["instance AT.ToJSON " <> x.name <> " where"]
+  mapM_ printToFuncs x.methods
+  where
+    printToFuncs m = do
+      tell [indent 1 <> "toJSON " <> m.nameInCode]
+      printRecordInstance 2 m
+      tell [indent 3 <> "= A.object"]
+      printNotEmpty
+        (4, "[", ",", Just "]")
+        ( (quoted "@type", "A..= AT.String " <> quoted m.nameReal, Nothing)
+            : map (\a -> (quoted a.nameReal, "A..= " <> a.toJsonFunc <> a.nameTemp, Nothing)) m.args
+        )
+
 printRecordInstance :: Int -> DataMethod -> Result
 printRecordInstance ind x =
   printNotEmpty
@@ -120,6 +136,8 @@ generateData c = T.unlines . execWriter $ do
   showSection c
   space
   fromJsonSection c
+  space
+  toJsonSection c
   where
     space = tell [""]
 

@@ -44,7 +44,7 @@ printRecordInstance x =
 toJsonSection :: Func -> Result
 toJsonSection x = do
   tell
-    [ "instance T.ToJSON " <> x.nameInCode <> " where",
+    [ "instance AT.ToJSON " <> x.nameInCode <> " where",
       indent 1 <> "toJSON",
       indent 2 <> x.nameInCode
     ]
@@ -52,8 +52,8 @@ toJsonSection x = do
   tell [indent 4 <> "= A.object"]
   printNotEmpty
     (5, "[", ",", Just "]")
-    ( (quoted "@type", ".= T.String " <> quoted x.nameReal, Nothing)
-        : map (\a -> (quoted a.nameReal, ".= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
+    ( (quoted "@type", "A..= AT.String " <> quoted x.nameReal, Nothing)
+        : map (\a -> (quoted a.nameReal, "A..= " <> a.toJsonFunc <> a.nameTemp, Nothing)) x.args
     )
 
 importsSection :: Func -> Result
