@@ -73,25 +73,35 @@ fromJsonSection x = do
     ]
   printNotEmpty
     (2, " ", " ", Just "")
-    (map (\m -> (quoted m.nameReal, " -> parse" <> m.nameInCode <> " v", Nothing)) x.methods)
-  tell [indent 2 <> "where"]
+    ( map
+        ( \m ->
+            ( quoted m.nameReal,
+              if null m.args
+                then " -> pure " <> m.nameInCode
+                else " -> parse" <> m.nameInCode <> " v",
+              Nothing
+            )
+        )
+        x.methods
+    )
+  when (any (\m -> not (null m.args)) x.methods) $ tell [indent 2 <> "where"]
   mapM_ printParseFuncs x.methods
   where
-    printParseFuncs m = do
-      tell
-        [ indent 3 <> "parse" <> m.nameInCode <> " :: A.Value -> AT.Parser " <> x.name,
-          indent 3 <> "parse" <> m.nameInCode <> " = A.withObject " <> quoted m.nameInCode <> " $ \\o -> do"
-        ]
-      printNotEmpty
-        (3, " ", " ", Nothing)
-        ( map
-            ( \a ->
-                (a.nameTemp, "<- " <> a.fromsonFunc <> "o A..:? ", Just (quoted a.nameReal))
+    printParseFuncs m
+      | null m.args = pure ()
+      | otherwise = do
+          tell [indent 3 <> "parse" <> m.nameInCode <> " :: A.Value -> AT.Parser " <> x.name]
+          tell [indent 3 <> "parse" <> m.nameInCode <> " = A.withObject " <> quoted m.nameInCode <> " $ \\o -> do"]
+          printNotEmpty
+            (3, " ", " ", Nothing)
+            ( map
+                ( \a ->
+                    (a.nameTemp, "<- " <> a.fromsonFunc <> "o A..:? ", Just (quoted a.nameReal))
+                )
+                m.args
             )
-            m.args
-        )
-      tell [indent 4 <> "pure $ " <> m.nameInCode]
-      printRecordInstance 5 m
+          tell [indent 4 <> "pure $ " <> m.nameInCode]
+          printRecordInstance 5 m
 
 printRecordInstance :: Int -> DataMethod -> Result
 printRecordInstance ind x =
@@ -132,7 +142,7 @@ generateBoot xs = do
       T.unlines
         [ "module TD.Data." <> n <> " where",
           "",
-          "import Data.Aeson.Types ( FromJSON, ToJSON )",
+          "import Data.Aeson.Types (FromJSON, ToJSON)",
           "",
           "data " <> n,
           "",
@@ -140,5 +150,7 @@ generateBoot xs = do
           "",
           "instance Show " <> n,
           "",
-          "instance FromJSON " <> n
+          "instance FromJSON " <> n,
+          "",
+          "instance ToJSON " <> n
         ]
