@@ -43,10 +43,10 @@ importsSection boots x = do
 
 dataSection :: DataClass -> Result
 dataSection x = do
-  let cmt = case x.comment of
-        (Just t) -> " -- ^ " <> t
-        Nothing -> ""
-  tell ["data " <> x.name <> cmt]
+  case x.comment of
+    (Just t) -> tell ["-- | " <> t]
+    Nothing -> pure ()
+  tell ["data " <> x.name]
   let h = head x.methods
       t = tail x.methods
   printMethod "=" h

@@ -17,7 +17,8 @@ moduleName x = do
 dataSection :: Func -> Result
 dataSection x = do
   tell
-    [ "data " <> x.nameInCode <> " -- ^ " <> x.comment,
+    [ "-- | " <> x.comment,
+      "data " <> x.nameInCode,
       indent 1 <> "= " <> x.nameInCode
     ]
   printNotEmpty
