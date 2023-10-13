@@ -38,4 +38,4 @@ justPrint (class_, methods, funcs) = do
   putStrLn "---"
 
 saveFiles :: FilePath -> ([Class], [Method], [Method]) -> IO ()
-saveFiles path (c, m, f) = writeData path c m >> writeFuncs path f
+saveFiles path (c, m, f) = writeFuncs path f >>= writeData path c m

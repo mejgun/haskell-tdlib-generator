@@ -15,17 +15,20 @@ import Parser (ClassName (ClassName))
 
 type Result = Writer [T.Text] ()
 
-moduleName :: DataClass -> Result
-moduleName x = do
+moduleName :: DataClass -> Bool -> Result
+moduleName x b = do
   tell ["module TD.Data." <> x.name]
-  printNotEmpty
-    (1, "(", ",", Just ") where")
-    $ (x.name <> "(..)", "", Nothing)
-      : ( map
-            (\m -> ("default" <> m.nameInCode, "", Nothing))
-            . filter (\m -> not (null m.args))
-        )
-        x.methods
+  if b
+    then
+      printNotEmpty
+        (1, "(", ",", Just ") where")
+        $ (x.name <> "(..)", "", Nothing)
+          : ( map
+                (\m -> ("default" <> m.nameInCode, "", Nothing))
+                . filter (\m -> not (null m.args))
+            )
+            x.methods
+    else tell [indent 1 <> "(" <> x.name <> "(..)) where"]
 
 importsSection :: [[T.Text]] -> DataClass -> Result
 importsSection boots x = do
@@ -167,9 +170,9 @@ printRecordInstance ind x =
     (ind, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
-printDefaults :: DataClass -> Result
-printDefaults x =
-  mapM_ go x.methods
+printDefaults :: DataClass -> Bool -> Result
+printDefaults x b =
+  when b $ mapM_ go x.methods
   where
     go :: DataMethod -> Result
     go m
@@ -185,9 +188,9 @@ printDefaults x =
             (map (\a -> (a.nameInCode, "= Nothing", Nothing)) m.args)
           tell [""]
 
-generateData :: [[ClassName]] -> DataClass -> T.Text
-generateData boots c = T.unlines . execWriter $ do
-  moduleName c
+generateData :: [[ClassName]] -> [ClassName] -> DataClass -> T.Text
+generateData boots requests c = T.unlines . execWriter $ do
+  moduleName c (tojson && adddefault)
   space
   importsSection (map (map (\(ClassName n) -> n)) boots) c
   space
@@ -197,14 +200,20 @@ generateData boots c = T.unlines . execWriter $ do
   space
   fromJsonSection c
   space
-  toJsonSection c
-  space
-  printDefaults c
+  when tojson $
+    do
+      toJsonSection c
+      space
+      printDefaults c adddefault
   where
+    tojson = ClassName c.name `elem` requests
+
+    adddefault = length c.methods == 1
+
     space = tell [""]
 
-generateBoot :: [(ClassName, [ClassName])] -> [[(ClassName, T.Text)]]
-generateBoot xs = do
+generateBoot :: [(ClassName, [ClassName])] -> [ClassName] -> [[(ClassName, T.Text)]]
+generateBoot xs requests = do
   map (map (\y -> (y, text y))) $
     filter (not . null) $
       map (\(y, ys) -> concat (go y [] ys)) xs
@@ -225,11 +234,13 @@ generateBoot xs = do
                  in go x newacc newys
             )
             (ys \\ acc)
-    text (ClassName n) =
+    text c@(ClassName n) =
       T.unlines
         [ "module TD.Data." <> n <> " (" <> n <> ") where",
           "",
-          "import Data.Aeson.Types (FromJSON, ToJSON)",
+          if c `elem` requests
+            then "import Data.Aeson.Types (FromJSON, ToJSON)"
+            else "import Data.Aeson.Types (FromJSON)",
           "",
           "data " <> n,
           "",
@@ -239,7 +250,9 @@ generateBoot xs = do
           "",
           "instance FromJSON " <> n,
           "",
-          "instance ToJSON " <> n
+          if c `elem` requests
+            then "instance ToJSON " <> n
+            else ""
         ]
 
 generateGeneralResult :: [ClassName] -> T.Text
