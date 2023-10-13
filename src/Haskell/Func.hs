@@ -5,7 +5,14 @@ import Data.Text qualified as T
 import Haskell.Internal (Argument (..), Func (..), Result, indent, printNotEmpty, quoted)
 
 moduleName :: Func -> Result
-moduleName x = tell ["module TD.Query." <> x.nameInCode <> "(" <> x.nameInCode <> "(..)) where"]
+moduleName x = do
+  tell
+    [ "module TD.Query." <> x.nameInCode,
+      indent 1 <> "(" <> x.nameInCode <> "(..)"
+    ]
+  when (length x.args > 1) $
+    tell [indent 1 <> ", default" <> x.nameInCode]
+  tell [indent 1 <> ") where"]
 
 dataSection :: Func -> Result
 dataSection x = do
@@ -72,6 +79,20 @@ importsSection :: Func -> Result
 importsSection x = do
   mapM_ (\(k, v) -> tell ["import qualified " <> k <> " as " <> v]) x.imports
 
+printDefault :: Func -> Result
+printDefault m
+  | length m.args < 2 = pure ()
+  | otherwise = do
+      tell
+        [ "default" <> m.nameInCode <> " :: " <> m.nameInCode,
+          "default" <> m.nameInCode <> " =",
+          indent 1 <> m.nameInCode
+        ]
+      printNotEmpty
+        (2, "{", ",", Just "}")
+        (map (\a -> (a.nameInCode, "= Nothing", Nothing)) m.args)
+      tell [""]
+
 generateFunc :: Func -> T.Text
 generateFunc m = T.unlines . execWriter $ do
   moduleName m
@@ -83,5 +104,7 @@ generateFunc m = T.unlines . execWriter $ do
   showSection m
   space
   toJsonSection m
+  space
+  printDefault m
   where
     space = tell [""]
