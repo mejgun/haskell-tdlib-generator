@@ -16,7 +16,16 @@ import Parser (ClassName (ClassName))
 type Result = Writer [T.Text] ()
 
 moduleName :: DataClass -> Result
-moduleName x = tell ["module TD.Data." <> x.name <> " (" <> x.name <> "(..)) where"]
+moduleName x = do
+  tell ["module TD.Data." <> x.name]
+  printNotEmpty
+    (1, "(", ",", Just ") where")
+    $ (x.name <> "(..)", "", Nothing)
+      : ( map
+            (\m -> ("default" <> m.nameInCode, "", Nothing))
+            . filter (\m -> not (null m.args))
+        )
+        x.methods
 
 importsSection :: [[T.Text]] -> DataClass -> Result
 importsSection boots x = do
@@ -158,6 +167,24 @@ printRecordInstance ind x =
     (ind, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
+printDefaults :: DataClass -> Result
+printDefaults x =
+  mapM_ go x.methods
+  where
+    go :: DataMethod -> Result
+    go m
+      | null m.args = pure ()
+      | otherwise = do
+          tell
+            [ "default" <> m.nameInCode <> " :: " <> x.name,
+              "default" <> m.nameInCode <> " =",
+              indent 1 <> m.nameInCode
+            ]
+          printNotEmpty
+            (2, "{", ",", Just "}")
+            (map (\a -> (a.nameInCode, "= Nothing", Nothing)) m.args)
+          tell [""]
+
 generateData :: [[ClassName]] -> DataClass -> T.Text
 generateData boots c = T.unlines . execWriter $ do
   moduleName c
@@ -171,6 +198,8 @@ generateData boots c = T.unlines . execWriter $ do
   fromJsonSection c
   space
   toJsonSection c
+  space
+  printDefaults c
   where
     space = tell [""]
 
