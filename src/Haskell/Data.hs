@@ -16,19 +16,21 @@ import Parser (ClassName (ClassName))
 type Result = Writer [T.Text] ()
 
 moduleName :: DataClass -> Result
-moduleName x = tell ["module TD.Data." <> x.name <> " where"]
+moduleName x = tell ["module TD.Data." <> x.name <> " (" <> x.name <> "(..)) where"]
 
-importsSection :: [T.Text] -> DataClass -> Result
+importsSection :: [[T.Text]] -> DataClass -> Result
 importsSection boots x = do
   mapM_
     ( \(k, v) ->
         let b =
-              if v `elem` boots
+              if any (needSource v) boots
                 then "{-# SOURCE #-} "
                 else ""
          in tell ["import " <> b <> "qualified " <> k <> " as " <> v]
     )
     x.imports
+  where
+    needSource v bs = x.name `elem` bs && v `elem` bs
 
 dataSection :: DataClass -> Result
 dataSection x = do
@@ -71,7 +73,7 @@ fromJsonSection :: DataClass -> Result
 fromJsonSection x = do
   tell
     [ "instance AT.FromJSON " <> x.name <> " where",
-      indent 1 <> "parseJSON v@(AT.Object obj) = do",
+      indent 1 <> "parseJSON " <> needV <> "(AT.Object obj) = do",
       indent 2 <> "t <- obj A..: \"@type\" :: AT.Parser String",
       "",
       indent 2 <> "case t of"
@@ -92,7 +94,13 @@ fromJsonSection x = do
     )
   when (any (\m -> not (null m.args)) x.methods) $ tell [indent 2 <> "where"]
   mapM_ printParseFuncs x.methods
+  tell [indent 1 <> "parseJSON _ = mempty"]
   where
+    needV =
+      if all (\m -> null m.args) x.methods
+        then ""
+        else "v@"
+
     printParseFuncs m
       | null m.args = pure ()
       | otherwise = do
@@ -150,11 +158,11 @@ printRecordInstance ind x =
     (ind, "{", ",", Just "}")
     (map (\a -> (a.nameInCode, "= " <> a.nameTemp, Nothing)) x.args)
 
-generateData :: [ClassName] -> DataClass -> T.Text
+generateData :: [[ClassName]] -> DataClass -> T.Text
 generateData boots c = T.unlines . execWriter $ do
   moduleName c
   space
-  importsSection (map (\(ClassName n) -> n) boots) c
+  importsSection (map (map (\(ClassName n) -> n)) boots) c
   space
   dataSection c
   space
@@ -166,24 +174,31 @@ generateData boots c = T.unlines . execWriter $ do
   where
     space = tell [""]
 
-generateBoot :: [(ClassName, [ClassName])] -> [(ClassName, T.Text)]
+generateBoot :: [(ClassName, [ClassName])] -> [[(ClassName, T.Text)]]
 generateBoot xs = do
-  map (\(x, _) -> (x, text x)) $
-    filter snd $
-      map (\(y, ys) -> (y, go y [] ys)) xs
+  map (map (\y -> (y, text y))) $
+    filter (not . null) $
+      map (\(y, ys) -> concat (go y [] ys)) xs
   where
     get :: ClassName -> [ClassName]
     get y = concatMap snd $ filter ((y ==) . fst) xs
 
-    go :: ClassName -> [ClassName] -> [ClassName] -> Bool
-    go _ _ [] = False
-    go x acc ys =
-      let newacc = nub $ acc ++ ys
-          newys = nub $ concatMap get $ ys \\ acc
-       in (x `elem` newacc) || go x newacc newys
+    go :: ClassName -> [ClassName] -> [ClassName] -> [[ClassName]]
+    go _ _ [] = []
+    go x acc ys = do
+      if x `elem` ys
+        then [x : acc]
+        else
+          concatMap
+            ( \y ->
+                let newacc = nub $ y : acc
+                    newys = nub $ get y \\ newacc
+                 in go x newacc newys
+            )
+            (ys \\ acc)
     text (ClassName n) =
       T.unlines
-        [ "module TD.Data." <> n <> " where",
+        [ "module TD.Data." <> n <> " (" <> n <> ") where",
           "",
           "import Data.Aeson.Types (FromJSON, ToJSON)",
           "",
@@ -201,11 +216,10 @@ generateBoot xs = do
 generateGeneralResult :: [ClassName] -> T.Text
 generateGeneralResult xs = T.unlines . execWriter $ do
   tell
-    [ "module TD.GeneralResult where",
+    [ "module TD.GeneralResult (GeneralResult(..)) where",
       "",
       "import Control.Applicative (Alternative ((<|>)))",
       "import Data.Aeson (FromJSON (parseJSON))",
-      "import qualified Data.Aeson as A",
       "import qualified Data.Aeson.Types as T"
     ]
   mapM_
@@ -221,7 +235,7 @@ generateGeneralResult xs = T.unlines . execWriter $ do
     [ " deriving (Eq, Show)",
       "",
       "instance T.FromJSON GeneralResult where",
-      " parseJSON v@(T.Object obj) ="
+      " parseJSON v ="
     ]
   printNotEmpty
     (2, "    (", "<|> (", Nothing)

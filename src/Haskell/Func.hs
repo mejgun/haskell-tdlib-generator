@@ -5,7 +5,7 @@ import Data.Text qualified as T
 import Haskell.Internal (Argument (..), Func (..), Result, indent, printNotEmpty, quoted)
 
 moduleName :: Func -> Result
-moduleName x = tell ["module TD.Query." <> x.nameInCode <> " where"]
+moduleName x = tell ["module TD.Query." <> x.nameInCode <> "(" <> x.nameInCode <> "(..)) where"]
 
 dataSection :: Func -> Result
 dataSection x = do

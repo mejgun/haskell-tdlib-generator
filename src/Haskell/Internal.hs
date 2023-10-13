@@ -84,12 +84,8 @@ classToDataClass cl ms =
           comment = (.comment) <$> cl,
           methods = snd $ L.mapAccumL (dataMethodToFunc clname) initMap ms,
           imports =
-            [ ("Data.Aeson", "A"),
-              ("Data.Aeson.Types", "AT"),
-              ("Data.Text", "T"),
-              ("Data.ByteString", "BS"),
-              ("TD.Lib.Internal", "I")
-            ]
+            defaultImports
+              ++ getInternalImport ms
               ++ nub
                 ( foldr
                     (getImport clname . (.value))
@@ -97,6 +93,11 @@ classToDataClass cl ms =
                     (foldr (\m acc -> m.args ++ acc) [] ms)
                 )
         }
+
+getInternalImport :: [Method] -> [(T.Text, T.Text)]
+getInternalImport ms
+  | all (\m -> null m.args) ms = []
+  | otherwise = [("TD.Lib.Internal", "I")]
 
 dataMethodToFunc :: ClassName -> ArgsMap -> Method -> (ArgsMap, DataMethod)
 dataMethodToFunc cln acc m =
@@ -144,6 +145,12 @@ initMap =
       (,TModule "non-existent")
       ["id", "length", "type", "data", "error", "filter"]
 
+defaultImports :: [(T.Text, T.Text)]
+defaultImports =
+  [ ("Data.Aeson", "A"),
+    ("Data.Aeson.Types", "AT")
+  ]
+
 methodToFunc :: Method -> Func
 methodToFunc m =
   let codeName = upFst m.name
@@ -154,13 +161,11 @@ methodToFunc m =
           returns = cname m.result,
           args = snd $ L.mapAccumL (argToArgument (ClassName codeName)) initMap m.args,
           imports =
-            [ ("Data.Aeson", "A"),
-              ("Data.Aeson.Types", "AT"),
-              ("Data.Text", "T"),
-              ("Data.ByteString", "BS"),
-              ("TD.Lib.Internal", "I")
-            ]
-              ++ foldr (getImport (ClassName codeName) . (.value)) [] m.args
+            defaultImports
+              ++ getInternalImport [m]
+              ++ nub
+                ( foldr (getImport (ClassName codeName) . (.value)) [] m.args
+                )
         }
 
 getImport :: ClassName -> ArgVal -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
@@ -170,6 +175,8 @@ getImport (ClassName nm) (TModule modname) acc =
         then acc
         else ("TD.Data." <> md, md) : acc
 getImport n (TVector v) acc = getImport n v acc
+getImport _ TBytes acc = ("Data.ByteString", "BS") : acc
+getImport _ TString acc = ("Data.Text", "T") : acc
 getImport _ _ acc = acc
 
 argValToToJsonFunc :: ArgVal -> Maybe T.Text
