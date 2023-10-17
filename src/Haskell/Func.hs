@@ -27,13 +27,13 @@ dataSection x = do
         (\a -> (a.nameInCode, ":: " <> a.typeInCode, ("-- ^ " <>) <$> a.comment))
         x.args
     )
-  tell [indent 1 <> "deriving (Eq)"]
+  tell [indent 1 <> "deriving (Eq, Show)"]
 
 showSection :: Func -> Result
 showSection x = do
   tell
-    [ "instance Show " <> x.nameInCode <> " where",
-      indent 1 <> "show",
+    [ "instance I.ShortShow " <> x.nameInCode <> " where",
+      indent 1 <> "shortShow",
       indent 2 <> x.nameInCode
     ]
   printRecordInstance x

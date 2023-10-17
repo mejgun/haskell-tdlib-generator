@@ -72,7 +72,7 @@ data Argument = Argument
     nameTemp :: T.Text,
     typeInCode :: T.Text,
     toJsonFunc :: Maybe T.Text,
-    fromsonFunc :: Maybe T.Text,
+    fromJsonFunc :: Maybe T.Text,
     comment :: Maybe T.Text
   }
 
@@ -85,7 +85,6 @@ classToDataClass cl ms =
           methods = snd $ L.mapAccumL (dataMethodToFunc clname) initMap ms,
           imports =
             defaultImports
-              ++ getInternalImport ms
               ++ nub
                 ( foldr
                     (getImport clname . (.value))
@@ -93,11 +92,6 @@ classToDataClass cl ms =
                     (foldr (\m acc -> m.args ++ acc) [] ms)
                 )
         }
-
-getInternalImport :: [Method] -> [(T.Text, T.Text)]
-getInternalImport ms
-  | all (\m -> null m.args) ms = []
-  | otherwise = [("TD.Lib.Internal", "I")]
 
 dataMethodToFunc :: ClassName -> ArgsMap -> Method -> (ArgsMap, DataMethod)
 dataMethodToFunc cln acc m =
@@ -127,7 +121,7 @@ argToArgument cln acc a = do
             nameInCode = nm,
             typeInCode = argValToHaskellVal cln a.value,
             toJsonFunc = argValToToJsonFunc a.value,
-            fromsonFunc = argValToFromJsonFunc a.value,
+            fromJsonFunc = argValToFromJsonFunc a.value,
             comment = a.comment
           }
       )
@@ -148,7 +142,8 @@ initMap =
 defaultImports :: [(T.Text, T.Text)]
 defaultImports =
   [ ("Data.Aeson", "A"),
-    ("Data.Aeson.Types", "AT")
+    ("Data.Aeson.Types", "AT"),
+    ("TD.Lib.Internal", "I")
   ]
 
 methodToFunc :: Method -> Func
@@ -162,7 +157,6 @@ methodToFunc m =
           args = snd $ L.mapAccumL (argToArgument (ClassName codeName)) initMap m.args,
           imports =
             defaultImports
-              ++ getInternalImport [m]
               ++ nub
                 ( foldr (getImport (ClassName codeName) . (.value)) [] m.args
                 )

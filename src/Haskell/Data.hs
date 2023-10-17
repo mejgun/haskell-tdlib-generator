@@ -54,7 +54,7 @@ dataSection x = do
       t = tail x.methods
   printMethod "=" h
   mapM_ (printMethod "|") t
-  tell [indent 1 <> "deriving (Eq)"]
+  tell [indent 1 <> "deriving (Eq, Show)"]
   where
     printMethod pre m = do
       tell [indent 1 <> pre <> " " <> m.nameInCode <> " -- ^ " <> m.comment]
@@ -67,12 +67,12 @@ dataSection x = do
 
 showSection :: DataClass -> Result
 showSection x = do
-  tell ["instance Show " <> x.name <> " where"]
+  tell ["instance I.ShortShow " <> x.name <> " where"]
   mapM_ printShow x.methods
   where
     printShow m = do
       tell
-        [ indent 1 <> "show " <> m.nameInCode
+        [ indent 1 <> "shortShow " <> m.nameInCode
         ]
       printRecordInstance 2 m
       tell [indent 3 <> "= " <> quoted m.nameInCode]
@@ -124,7 +124,7 @@ fromJsonSection x = do
                 ( \a ->
                     ( a.nameTemp,
                       "<- "
-                        <> ( case a.fromsonFunc of
+                        <> ( case a.fromJsonFunc of
                                Nothing -> ""
                                (Just func) -> func <> " <$> "
                            )
@@ -241,12 +241,15 @@ generateBoot xs requests = do
           if c `elem` requests
             then "import Data.Aeson.Types (FromJSON, ToJSON)"
             else "import Data.Aeson.Types (FromJSON)",
+          "import TD.Lib.Internal (ShortShow)",
           "",
           "data " <> n,
           "",
           "instance Eq " <> n,
           "",
           "instance Show " <> n,
+          "",
+          "instance ShortShow " <> n,
           "",
           "instance FromJSON " <> n,
           "",
