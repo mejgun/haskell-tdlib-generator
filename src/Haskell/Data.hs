@@ -286,7 +286,7 @@ generateGeneralResult xs = T.unlines . execWriter $ do
     ( \(ClassName x) ->
         tell
           [ indent 1 <> "shortShow (" <> x <> " v)",
-            indent 2 <> "= " <> quoted x <> " <> \"(\" <> I.shortShow v <> \")\""
+            indent 2 <> "= " <> quoted x <> " <> \" (\" <> I.shortShow v <> \")\""
           ]
     )
     xs
