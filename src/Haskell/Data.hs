@@ -265,7 +265,8 @@ generateGeneralResult xs = T.unlines . execWriter $ do
       "",
       "import Control.Applicative (Alternative ((<|>)))",
       "import Data.Aeson (FromJSON (parseJSON))",
-      "import qualified Data.Aeson.Types as T"
+      "import qualified Data.Aeson.Types as T",
+      "import qualified TD.Lib.Internal as I"
     ]
   mapM_
     ( \(ClassName x) ->
@@ -279,6 +280,18 @@ generateGeneralResult xs = T.unlines . execWriter $ do
   tell
     [ " deriving (Eq, Show)",
       "",
+      "instance I.ShortShow GeneralResult where"
+    ]
+  mapM_
+    ( \(ClassName x) ->
+        tell
+          [ indent 1 <> "shortShow (" <> x <> " v)",
+            indent 2 <> "= " <> quoted x <> " <> \"(\" <> I.shortShow v <> \")\""
+          ]
+    )
+    xs
+  tell
+    [ "",
       "instance T.FromJSON GeneralResult where",
       " parseJSON v ="
     ]
