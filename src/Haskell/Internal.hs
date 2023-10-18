@@ -149,10 +149,11 @@ defaultImports =
 methodToFunc :: Method -> Func
 methodToFunc m =
   let codeName = upFst m.name
+      (ClassName res) = m.result
    in Func
         { nameInCode = codeName,
           nameReal = m.name,
-          comment = m.comment,
+          comment = m.comment <> ". Returns 'TD.Data." <> res <> "." <> res <> "'",
           returns = cname m.result,
           args = snd $ L.mapAccumL (argToArgument (ClassName codeName)) initMap m.args,
           imports =
