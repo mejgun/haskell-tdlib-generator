@@ -10,8 +10,8 @@ authenticationCodeTypeSms reset_in:int32 = AuthenticationCodeType;
 //@class EmailAddressAuthentication @description Contains authentication data for a email address
 
 //@description An authentication code is delivered via a phone call to the specified phone number
-//@length Length of the code
-authenticationCodeTypeCall length:int32 = AuthenticationCodeType;
+//@param_description Length of the code
+authenticationCodeTypeCall description:int32 = AuthenticationCodeType;
 
 ---functions---
 

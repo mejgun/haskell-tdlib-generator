@@ -80,7 +80,7 @@ parseMethodLine x
 
 parseMethodComment :: T.Text -> Either String T.Text
 parseMethodComment x = case T.words x of
-  "//@description" : t -> Right $ T.unwords t
+  "//@@description" : t -> Right $ T.unwords t
   _ -> Left $ "bad method description " <> T.unpack x
 
 parseArgComments :: [T.Text] -> Either String [(T.Text, T.Text)]

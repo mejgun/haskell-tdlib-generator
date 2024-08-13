@@ -2,7 +2,7 @@ module Pre (parse) where
 
 import Data.Text qualified as T
 import Parser (Class, Method, parseClass, parseMethod)
-import Pre.Internal
+import Pre.Internal (commentSplit)
 
 junk :: [T.Text]
 junk =
@@ -32,7 +32,10 @@ trim :: T.Text -> T.Text
 trim = T.unlines . map T.strip . T.lines
 
 addNewLines :: T.Text -> T.Text
-addNewLines = T.replace "//@description " "\n\n//@description "
+addNewLines = T.replace "//@description " "\n\n//@@description "
+
+fixDescriptionParam :: T.Text -> T.Text
+fixDescriptionParam = T.replace "@param_description" "@description"
 
 prepare :: T.Text -> ([[T.Text]], [[T.Text]])
 prepare =
@@ -40,6 +43,7 @@ prepare =
     . trim
     . commentSplit
     . removeMultiComment
+    . fixDescriptionParam
     . addNewLines
     . removeJunk
 

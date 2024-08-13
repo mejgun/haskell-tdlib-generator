@@ -30,8 +30,7 @@ main = do
                       [ Arg
                           { name = "length",
                             value = TInt32,
-                            comment = Just "Left time before the email",
-                            null = False
+                            comment = Just "Left time before the email"
                           }
                       ],
                     result = ClassName "AuthenticationCodeType"
@@ -43,8 +42,7 @@ main = do
                       [ Arg
                           { name = "reset_in",
                             value = TInt32,
-                            comment = Nothing,
-                            null = False
+                            comment = Nothing
                           }
                       ],
                     result = ClassName "AuthenticationCodeType"
@@ -54,10 +52,9 @@ main = do
                     comment = "An authentication code is delivered via a phone call to the specified phone number",
                     args =
                       [ Arg
-                          { name = "length",
+                          { name = "description",
                             value = TInt32,
-                            comment = Just "Length of the code",
-                            null = False
+                            comment = Just "Length of the code"
                           }
                       ],
                     result = ClassName "AuthenticationCodeType"
@@ -70,8 +67,7 @@ main = do
                       [ Arg
                           { name = "premium_animation",
                             value = TModule "file",
-                            comment = Just "Premium animation of the sticker; may be null. If present, only Telegram Premium users can use the sticker",
-                            null = True
+                            comment = Just "Premium animation of the sticker; may be null. If present, only Telegram Premium users can use the sticker"
                           }
                       ],
                     result = ClassName "StickerFullType"
@@ -83,8 +79,7 @@ main = do
                       [ Arg
                           { name = "commands",
                             value = TVector (TVector (TModule "VectorPathCommand")),
-                            comment = Nothing,
-                            null = False
+                            comment = Nothing
                           }
                       ],
                     result = ClassName "ClosedVectorPath"
