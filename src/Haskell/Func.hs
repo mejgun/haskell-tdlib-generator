@@ -1,5 +1,6 @@
 module Haskell.Func (generateFunc) where
 
+import Control.Monad (unless, when)
 import Control.Monad.Writer
 import Data.Text qualified as T
 import Haskell.Internal (Argument (..), Func (..), Result, indent, printNotEmpty, quoted)

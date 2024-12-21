@@ -1,8 +1,14 @@
 import Data.Text.IO qualified as TI
 import Parser
+  ( Arg (Arg, comment, name, value),
+    ArgVal (TInt32, TModule, TVector),
+    Class (Class, comment, name),
+    ClassName (ClassName),
+    Method (Method, args, comment, name, result),
+  )
 import Pre qualified
-import Pre.Internal
-import Test.Hspec
+import Pre.Internal (commentSplit)
+import Test.Hspec (describe, hspec, it, shouldBe)
 
 main :: IO ()
 main = do
@@ -13,6 +19,7 @@ main = do
         commentSplit
           "//@description Returns q @query Query w @message_thread_id If e\nsupergroupMembersFilterMention query:string message_thread_id:int53 = SupergroupMembersFilter;"
           `shouldBe` "//@description Returns q \n//@query Query w \n//@message_thread_id If e\nsupergroupMembersFilterMention query:string message_thread_id:int53 = SupergroupMembersFilter;"
+
     describe "parser test" $ do
       it "from file" $ do
         Pre.parse f

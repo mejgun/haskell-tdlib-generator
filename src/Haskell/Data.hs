@@ -1,5 +1,6 @@
 module Haskell.Data (generateData, generateBoot, generateGeneralResult) where
 
+import Control.Monad (unless, when)
 import Control.Monad.Writer
 import Data.List (nub, (\\))
 import Data.Text qualified as T
