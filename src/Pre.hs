@@ -1,7 +1,6 @@
-module Pre (parse) where
+module Pre (prepare) where
 
 import Data.Text qualified as T
-import Parser (Class, Method, parseClass, parseMethod)
 import Pre.Internal (commentSplit)
 
 junk :: [T.Text]
@@ -57,18 +56,3 @@ split x = result
     func a@([], _) "" = a
     func (a, r) "" = ([], r ++ [a])
     func (a, r) s = (a ++ [s], r)
-
-parse :: T.Text -> Either String ([Class], [Method], [Method])
-parse content = do
-  c <- sequence class_
-  m <- sequence methods
-  f <- sequence funcs
-  Right (c, m, f)
-  where
-    (dat, fun) = prepare content
-    fn (cs, ms) x =
-      if length x == 1
-        then (cs ++ [parseClass x], ms)
-        else (cs, ms ++ [parseMethod x])
-    (class_, methods) = foldl fn ([], []) dat
-    funcs = map parseMethod fun

@@ -6,7 +6,7 @@ module Lib
 where
 
 import Data.Text.IO qualified as TI
-import Parser (Class, Method)
+import Parser (Class, Method, parse)
 import Pre qualified
 import Save (writeData, writeFuncs)
 import System.Environment (getArgs)
@@ -25,7 +25,8 @@ someFunc = do
                 Left e -> error $ show e
                 Right a -> pure a
             )
-          . Pre.parse
+          . parse
+          . Pre.prepare
 
 justPrint :: ([Class], [Method], [Method]) -> IO ()
 justPrint (class_, methods, funcs) = do
