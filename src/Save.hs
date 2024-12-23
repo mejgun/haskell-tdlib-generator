@@ -1,12 +1,18 @@
-module Save (writeData, writeFuncs) where
+module Save (genData, genFuncs, getClasses) where
 
 import Data.List (find, groupBy, nub, sort)
 import Data.Text qualified as T
-import Data.Text.IO qualified as TIO
 import Haskell.Data (generateBoot, generateData, generateGeneralResult)
 import Haskell.Func (generateFunc)
 import Haskell.Internal (classToDataClass, methodToFunc, upFst)
-import Parser (Arg (..), ArgVal (..), Class (..), ClassName (ClassName), Method (..), result)
+import Parser
+  ( Arg (..),
+    ArgVal (..),
+    Class (..),
+    ClassName (ClassName),
+    Method (..),
+    result,
+  )
 
 dataDir :: String
 dataDir = "/TD/Data/"
@@ -17,10 +23,10 @@ grDir = "/TD/"
 funcDir :: String
 funcDir = "/TD/Query/"
 
-writeData :: FilePath -> [Class] -> [Method] -> [ClassName] -> IO ()
-writeData path classes methods requestClasses = do
-  mapM_ (save ".hs" . f (map (map fst) boots)) listwClass
-  mapM_ (save ".hs-boot") $ concat boots
+genData :: FilePath -> [Class] -> [Method] -> [ClassName] -> [(FilePath, T.Text)]
+genData path classes methods requestClasses = do
+  map (setFileName ".hs" . f (map (map fst) boots)) listwClass
+    <> map (setFileName ".hs-boot") (concat boots)
   where
     boots :: [[(ClassName, T.Text)]]
     boots = generateBoot importsList requests
@@ -65,36 +71,35 @@ writeData path classes methods requestClasses = do
     f bts (name, mbc, ms) =
       (name, generateData bts requests (classToDataClass mbc ms))
 
-    save :: String -> (ClassName, T.Text) -> IO ()
-    save suffix (c, text) = TIO.writeFile (fileName c suffix) text
+    setFileName :: String -> (ClassName, T.Text) -> (FilePath, T.Text)
+    setFileName suffix (c, text) = (fileName c suffix, text)
 
     fileName :: ClassName -> String -> FilePath
     fileName (ClassName name) suffix =
       path <> dataDir <> T.unpack name <> suffix
 
-writeFuncs :: FilePath -> [Method] -> IO [ClassName]
-writeFuncs path xs = do
-  mapM_ (save . f) xs
-  TIO.writeFile (path <> grDir <> "GeneralResult.hs") $
+getClasses :: [Method] -> [ClassName]
+getClasses = concatMap (\m -> concatMap (go . (.value)) m.args)
+  where
+    go (TModule t) = [ClassName (upFst t)]
+    go (TVector v) = go v
+    go _ = []
+
+genFuncs :: FilePath -> [Method] -> [(FilePath, T.Text)]
+genFuncs path xs =
+  ( path <> grDir <> "GeneralResult.hs",
     generateGeneralResult $
       sort $
         nub $
           map (\m -> m.result) xs
-  pure getModules
+  )
+    : map (setFileName . f) xs
   where
     f :: Method -> (T.Text, T.Text)
     f m@Method {name = name} = (name, generateFunc (methodToFunc m))
 
-    save :: (T.Text, T.Text) -> IO ()
-    save (name, text) = TIO.writeFile (fileName name) text
+    setFileName :: (T.Text, T.Text) -> (FilePath, T.Text)
+    setFileName (name, text) = (fileName name, text)
 
     fileName :: T.Text -> FilePath
     fileName n = path <> funcDir <> T.unpack (upFst n) <> ".hs"
-
-    getModules :: [ClassName]
-    getModules =
-      concatMap (\m -> concatMap (go . (.value)) m.args) xs
-      where
-        go (TModule t) = [ClassName (upFst t)]
-        go (TVector v) = go v
-        go _ = []

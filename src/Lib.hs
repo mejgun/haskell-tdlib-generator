@@ -5,10 +5,10 @@ module Lib
   )
 where
 
-import Data.Text.IO qualified as TI
+import Data.Text.IO qualified as TIO
 import Parser (Class, Method, parse)
 import Pre qualified
-import Save (writeData, writeFuncs)
+import Save (genData, genFuncs, getClasses)
 import System.Environment (getArgs)
 
 someFunc :: IO ()
@@ -20,7 +20,7 @@ someFunc = do
     _ -> error "unknown params"
   where
     load fname =
-      TI.readFile fname
+      TIO.readFile fname
         >>= ( \case
                 Left e -> error $ show e
                 Right a -> pure a
@@ -39,4 +39,7 @@ justPrint (class_, methods, funcs) = do
   putStrLn "---"
 
 saveFiles :: FilePath -> ([Class], [Method], [Method]) -> IO ()
-saveFiles path (c, m, f) = writeFuncs path f >>= writeData path c m
+saveFiles path (c, m, f) =
+  let write = mapM_ (uncurry TIO.writeFile)
+   in write (genFuncs path f)
+        >> write (genData path c m (getClasses f))
