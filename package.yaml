@@ -70,6 +70,7 @@ tests:
     - haskell-tdlib-generator
     - text
     - hspec
+    - directory
     default-extensions:
     - OverloadedStrings
     - NoFieldSelectors

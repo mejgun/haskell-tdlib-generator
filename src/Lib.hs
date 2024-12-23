@@ -6,9 +6,9 @@ module Lib
 where
 
 import Data.Text.IO qualified as TIO
+import Haskell.Save (genData, genFuncs, getClasses)
 import Parser (Class, Method, parse)
 import Pre qualified
-import Save (genData, genFuncs, getClasses)
 import System.Environment (getArgs)
 
 someFunc :: IO ()
