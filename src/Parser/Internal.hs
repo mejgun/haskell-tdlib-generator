@@ -60,23 +60,33 @@ parseClass xs = f1 >>= f2
       _ -> Left $ "not class description " <> show x
 
 parseMethod :: [T.Text] -> Either String Method
-parseMethod xs = do
+parseMethod [] = Left "empty method"
+parseMethod [_] = Left "wrong method format"
+parseMethod (x : xs) = do
   (name, arglist, result) <- parseMethodLine $ last xs
-  comment <- parseMethodComment $ head xs
-  argcomments <- parseArgComments . init $ tail xs
+  comment <- parseMethodComment x
+  argcomments <- parseArgComments . init $ xs
   args <- makeArgList arglist argcomments
   Right $ Method name comment args (ClassName result)
 
+-- e.g. userFullInfo personal_photo:chatPhoto bot_info:botInfo = UserFullInfo;
 parseMethodLine :: T.Text -> Either String (T.Text, [(T.Text, ArgVal)], T.Text)
 parseMethodLine x
   | not $ T.isSuffixOf ";" x = Left $ "method line must end with ; " <> T.unpack x
   | last (init (T.words x)) /= "=" = Left $ "method line must contain '=': " <> T.unpack x
-  | otherwise =
-      let xs = T.words $ T.dropEnd 1 x
-          name = head xs
-          class_ = last xs
-          args = map parseArg . init . init $ tail xs
-       in sequence args >>= \a -> Right (name, a, class_)
+  | otherwise = case T.words x of
+      [] -> Left "empty method line"
+      [_] -> Left $ "wrong method line: " <> T.unpack x
+      (name : xs) ->
+        do
+          (args, class_) <- go xs []
+          Right (name, args, class_)
+  where
+    go [] _ = Left $ "cannot parse method line: " <> T.unpack x
+    go ["=", class_] args = Right (args, T.dropEnd 1 class_)
+    go (y : ys) args = do
+      a <- parseArg y
+      go ys (args <> [a])
 
 parseMethodComment :: T.Text -> Either String T.Text
 parseMethodComment x = case T.words x of

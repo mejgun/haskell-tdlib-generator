@@ -11,7 +11,6 @@ import Parser
     Class (..),
     ClassName (ClassName),
     Method (..),
-    result,
   )
 
 dataDir :: String
