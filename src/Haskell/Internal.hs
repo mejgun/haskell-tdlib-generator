@@ -77,7 +77,7 @@ data Argument = Argument
   }
 
 classToDataClass :: Maybe Class -> [Method] -> DataClass
-classToDataClass _ [] = error "cannot be. methods list is empty"
+classToDataClass _ [] = error "(classToDataClass) cannot be. methods list is empty"
 classToDataClass cl ms@(h : _) =
   let clname = h.result
    in DataClass

@@ -46,13 +46,12 @@ importsSection boots x = do
     needSource v bs = x.name `elem` bs && v `elem` bs
 
 dataSection :: DataClass -> Result
-dataSection x = do
+dataSection DataClass {methods = []} = error "(dataSection) cannot be. no methods"
+dataSection x@DataClass {methods = (h : t)} = do
   case x.comment of
-    (Just t) -> tell ["-- | " <> t]
+    (Just c) -> tell ["-- | " <> c]
     Nothing -> pure ()
   tell ["data " <> x.name]
-  let h = head x.methods
-      t = tail x.methods
   printMethod "=" h
   mapM_ (printMethod "|") t
   tell [indent 1 <> "deriving (Eq, Show)"]

@@ -25,7 +25,7 @@ removeMultiComment = T.replace "\n//-" " "
 splitFuncs :: T.Text -> ([[T.Text]], [[T.Text]])
 splitFuncs t = case T.splitOn "---functions---\n" t of
   [dat, fun] -> (split dat, split fun)
-  _ -> error "no functions separator"
+  _ -> error "(splitFuncs) no functions separator"
 
 trim :: T.Text -> T.Text
 trim = T.unlines . map T.strip . T.lines

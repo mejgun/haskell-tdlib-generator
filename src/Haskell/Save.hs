@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Haskell.Save (genData, genFuncs, getClasses) where
 
 import Data.List (find, groupBy, nub, sort)
@@ -5,7 +7,7 @@ import Data.Text qualified as T
 import Haskell.Data (generateBoot, generateData, generateGeneralResult)
 import Haskell.Func (generateFunc)
 import Haskell.Internal (classToDataClass, methodToFunc, upFst)
-import Parser
+import Parser.Internal
   ( Arg (..),
     ArgVal (..),
     Class (..),
@@ -43,12 +45,10 @@ genData path classes methods requestClasses = do
     listwClass :: [(ClassName, Maybe Class, [Method])]
     listwClass =
       map
-        ( \ms ->
-            let m = head ms
-             in ( m.result,
-                  find (\c -> c.name == m.result) classes,
-                  ms
-                )
+        ( \case
+            [] -> error "(listwClass) cannot be. methods grouped list is empty"
+            ms@(m : _) ->
+              (m.result, find (\c -> c.name == m.result) classes, ms)
         )
         list
 
