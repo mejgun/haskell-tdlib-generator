@@ -1,5 +1,4 @@
-import Control.Monad (join)
-import Data.List (isSuffixOf, sortBy)
+import Data.Either (fromRight)
 import Data.Text.IO qualified as TI
 import Haskell.Save (genData, genFuncs, getClasses)
 import Lib ()
@@ -17,13 +16,15 @@ import Parser.Internal
   )
 import Pre (prepare)
 import Pre.Internal (commentSplit)
-import System.Directory
-import Test.Hspec (describe, hspec, it, shouldBe, shouldContain, shouldMatchList)
+import System.Directory (listDirectory)
+import Test.Hspec (describe, hspec, it, shouldBe)
 
 main :: IO ()
 main = do
-  f <- TI.readFile "test/test_parse.tl"
-  f_pre <- TI.readFile "test/test_pre.tl"
+  let tl_prefix = "test/tl_files/"
+  f <- TI.readFile $ tl_prefix <> "test_parse.tl"
+  f_pre <- TI.readFile $ tl_prefix <> "test_pre.tl"
+  f_full <- TI.readFile $ tl_prefix <> "test_full.tl"
   hspec $ do
     describe "comment split" $ do
       it "" $ do
@@ -177,35 +178,34 @@ main = do
               ]
             )
 
+    let prefix = "test/gen_haskell"
+        d_prefix = prefix <> "/TD/Data"
+        q_prefix = prefix <> "/TD/Query"
+        rd name =
+          TI.readFile name
+            >>= \content -> pure (name, content)
+        r_q name = rd (q_prefix <> "/" <> name)
+        r_d name = rd (d_prefix <> "/" <> name)
+        (c, m, funcs) = fromRight (error "cannot be") $ (parse . prepare) f_full
+        contain descr xs1 xs2 = do
+          mapM_
+            ( \i2@(x2, _) -> case filter (\(x1, _) -> x1 == x2) xs1 of
+                [i1] -> i1 `shouldBe` i2
+                [] -> error $ descr <> ". not found " <> x2
+                xs -> error $ descr <> ". multiple found " <> x2 <> ": " <> show xs
+            )
+            xs2
+
     describe "Haskell code generation" $ do
-      it "" $ do
-        let prefix = "test/haskell_html"
-            d_prefix = prefix <> "/TD/Data"
-            q_prefix = prefix <> "/TD/Query"
-            rd name =
-              TI.readFile name
-                >>= \content -> pure (name, content)
-            r_q name = rd (q_prefix <> "/" <> name)
-            r_d name = rd (d_prefix <> "/" <> name)
-        -- srt = sortBy (\(a, _) (b, _) -> compare a b)
+      it "query files" $ do
         q_file_names <- listDirectory q_prefix
         q_files <-
           sequence $
             rd (prefix <> "/TD/GeneralResult.hs") : map r_q q_file_names
+        contain "direct q" (genFuncs prefix funcs) q_files
+        contain "reverse q" q_files (genFuncs prefix funcs)
+      it "data files" $ do
         d_file_names <- listDirectory d_prefix
         d_files <- mapM r_d d_file_names
-        f_full <- TI.readFile "test/test_full.tl"
-        let Right (c, m, funcs) = (parse . prepare) f_full
-            contain descr xs1 xs2 = do
-              mapM_
-                ( \i2@(x2, _) -> case filter (\(x1, _) -> x1 == x2) xs1 of
-                    [i1] -> i1 `shouldBe` i2
-                    [] -> error $ descr <> ". not found " <> x2
-                    xs -> error $ descr <> ". multiple found " <> x2 <> ": " <> show xs
-                )
-                xs2
-         in do
-              contain "direct q" (genFuncs prefix funcs) q_files
-              contain "reverse q" q_files (genFuncs prefix funcs)
-              contain "direct d" (genData prefix c m (getClasses funcs)) d_files
-              contain "reverse d" d_files (genData prefix c m (getClasses funcs))
+        contain "direct d" (genData prefix c m (getClasses funcs)) d_files
+        contain "reverse d" d_files (genData prefix c m (getClasses funcs))
