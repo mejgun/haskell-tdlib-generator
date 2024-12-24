@@ -77,8 +77,9 @@ data Argument = Argument
   }
 
 classToDataClass :: Maybe Class -> [Method] -> DataClass
-classToDataClass cl ms =
-  let clname = (head ms).result
+classToDataClass _ [] = error "cannot be. methods list is empty"
+classToDataClass cl ms@(h : _) =
+  let clname = h.result
    in DataClass
         { name = cname clname,
           comment = (.comment) <$> cl,
@@ -217,10 +218,12 @@ justify i = T.justifyLeft i ' '
 -- (fist val, second, comment)
 printNotEmpty :: (Int, T.Text, T.Text, Maybe T.Text) -> [(T.Text, T.Text, Maybe T.Text)] -> Result
 printNotEmpty _ [] = pure ()
-printNotEmpty (ind, begin, loop, end) list =
-  let (len1, len2) = foldr (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2)) (1, 1) list
-      h = head list
-      t = tail list
+printNotEmpty (ind, begin, loop, end) list@(h : t) =
+  let (len1, len2) =
+        foldr
+          (\(a, b, _) (m1, m2) -> (max (T.length a) m1, max (T.length b) m2))
+          (1, 1)
+          list
       save pre (a, b, c) =
         let p1 = T.justifyLeft len1 ' ' a
             p2 = case c of
